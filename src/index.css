@@ -1,0 +1,83 @@
+:root {
+  --text: #52616b;
+  --text-strong: #0d1820;
+  --muted: #7c8a94;
+  --bg: #f5fbfb;
+  --surface: #ffffff;
+  --border: rgba(14, 35, 43, 0.1);
+  --accent: #2bdae5;
+  --green: #13bc7e;
+  --red: #f05f5f;
+  --yellow: #eab308;
+  --chip: rgba(43, 218, 229, 0.11);
+  --shadow: 0 22px 70px rgba(15, 23, 42, 0.08);
+
+  font: 16px/1.5 Assistant, Rubik, 'Segoe UI', system-ui, sans-serif;
+  color: var(--text);
+  background:
+    radial-gradient(circle at top left, rgba(43, 218, 229, 0.24), transparent 34rem),
+    linear-gradient(180deg, #f7ffff 0%, var(--bg) 48%, #eef7f7 100%);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  scrollbar-color: rgba(43, 218, 229, 0.7) rgba(13, 24, 32, 0.08);
+}
+
+body {
+  min-width: 320px;
+  min-height: 100svh;
+  margin: 0;
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+}
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid rgba(43, 218, 229, 0.32);
+  outline-offset: 2px;
+}
+
+#root {
+  min-height: 100svh;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin-block-start: 0;
+}
+
+h1,
+h2,
+h3 {
+  color: var(--text-strong);
+}
+
+h1 {
+  margin: 0;
+  font-size: clamp(2.8rem, 8vw, 5.6rem);
+  font-weight: 950;
+  letter-spacing: 0.02em;
+  line-height: 0.92;
+}
+
+h2 {
+  margin: 0;
+  font-size: clamp(1.18rem, 2vw, 1.5rem);
+}
+
+p {
+  margin-block-end: 0;
+}
