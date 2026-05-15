@@ -93,6 +93,15 @@ const getStats = async () => {
   return stats
 }
 
+const parseTagList = (value) => {
+  if (Array.isArray(value)) return value.filter(Boolean)
+  if (typeof value !== 'string') return []
+  return value
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean)
+}
+
 const updateArtist = async (id, patch) => {
   const currentRows = await sql`SELECT * FROM artists WHERE id = ${id} LIMIT 1`
 
@@ -107,11 +116,22 @@ const updateArtist = async (id, patch) => {
     throw new Error('Invalid status')
   }
 
+  const nameHe = patch.nameHe ?? current.name_he
+  const nameEn = patch.nameEn ?? current.name_en
+  const genres = patch.genres !== undefined ? parseTagList(patch.genres) : current.genres
+  const tags = patch.tags !== undefined ? parseTagList(patch.tags) : current.tags
+
   const [updated] = await sql`
     UPDATE artists
     SET
+      name_he = ${nameHe},
+      name_en = ${nameEn},
+      genres = ${genres},
+      tags = ${tags},
+      latest_album = ${patch.latestAlbum ?? current.latest_album},
       status = ${nextStatus},
       owner = ${patch.owner ?? current.owner},
+      source = ${patch.source ?? current.source},
       notes = ${patch.notes ?? current.notes},
       priority = ${patch.priority ?? current.priority},
       updated_at = NOW()
@@ -120,6 +140,75 @@ const updateArtist = async (id, patch) => {
   `
 
   return normalizeArtist(updated)
+}
+
+const createArtist = async (payload) => {
+  const nameHe = String(payload.nameHe ?? '').trim()
+  if (!nameHe) {
+    throw new Error('Artist name is required')
+  }
+
+  const status = payload.status ?? 'unsigned'
+  if (!allowedStatuses.has(status)) {
+    throw new Error('Invalid status')
+  }
+
+  const id =
+    String(payload.id ?? '').trim() ||
+    `${nameHe
+      .toLowerCase()
+      .replace(/[^\p{L}\p{N}]+/gu, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 60)}-${Date.now()}`
+
+  const genres = parseTagList(payload.genres)
+  const tags = parseTagList(payload.tags)
+
+  const [created] = await sql`
+    INSERT INTO artists (
+      id,
+      name_he,
+      name_en,
+      genres,
+      tags,
+      latest_album,
+      status,
+      owner,
+      source,
+      notes,
+      priority
+    )
+    VALUES (
+      ${id},
+      ${nameHe},
+      ${String(payload.nameEn ?? '').trim()},
+      ${genres},
+      ${tags},
+      ${String(payload.latestAlbum ?? '').trim()},
+      ${status},
+      ${payload.owner ?? 'לא שויך'},
+      ${String(payload.source ?? '').trim()},
+      ${String(payload.notes ?? '').trim()},
+      ${payload.priority ?? (status === 'signed' ? 'שימור קשר' : status === 'stuck' ? 'פתיחת חסם' : 'ליצירת קשר')}
+    )
+    RETURNING *
+  `
+
+  return normalizeArtist(created)
+}
+
+const deleteArtist = async (id) => {
+  const rows = await sql`DELETE FROM artists WHERE id = ${id} RETURNING id`
+  return rows.length > 0
+}
+
+const bulkDeleteArtists = async (ids) => {
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return []
+  }
+
+  const rows = await sql`DELETE FROM artists WHERE id = ANY(${ids}) RETURNING id`
+  return rows.map((row) => row.id)
 }
 
 const bulkUpdateArtists = async ({ ids, status, owner, priority }) => {
@@ -204,7 +293,10 @@ const upsertArtists = async (artists) => {
 }
 
 module.exports = {
+  bulkDeleteArtists,
   bulkUpdateArtists,
+  createArtist,
+  deleteArtist,
   getArtists,
   getStats,
   setupDatabase,

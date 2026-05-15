@@ -20,6 +20,7 @@ const base64ToBuffer = (value: string) => {
 
 const canUseWebAuthn = () =>
   typeof window !== 'undefined' &&
+  window.isSecureContext &&
   'PublicKeyCredential' in window &&
   typeof navigator.credentials?.get === 'function'
 
@@ -30,9 +31,23 @@ export const useBiometricUnlock = (onSuccess: () => void) => {
   useEffect(() => {
     if (!canUseWebAuthn()) return
 
-    PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable?.()
-      .then((supported) => setAvailable(Boolean(supported)))
-      .catch(() => setAvailable(false))
+    const detect = async () => {
+      try {
+        const platform =
+          await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable?.()
+        if (platform) {
+          setAvailable(true)
+          return
+        }
+      } catch {
+        // Continue to fallback check
+      }
+
+      // Windows Hello, Touch ID, Face ID, or security keys on desktop/mobile
+      setAvailable(true)
+    }
+
+    void detect()
   }, [])
 
   const registerCredential = useCallback(async () => {
@@ -92,7 +107,7 @@ export const useBiometricUnlock = (onSuccess: () => void) => {
 
       if (assertion) onSuccess()
     } catch {
-      // User cancelled or device unavailable — stay on lock screen
+      // User cancelled or device unavailable
     } finally {
       setBusy(false)
     }

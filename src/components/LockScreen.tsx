@@ -50,7 +50,11 @@ export const LockScreen = ({ onUnlock }: LockScreenProps) => {
             disabled={biometricBusy}
           >
             <Fingerprint size={22} strokeWidth={2} />
-            <span>{biometricBusy ? 'מאמת...' : 'כניסה בטביעת אצבע'}</span>
+            <span>
+              {biometricBusy
+                ? 'מאמת...'
+                : 'כניסה ביומטרית (טביעת אצבע / Windows Hello)'}
+            </span>
           </button>
         )}
       </div>

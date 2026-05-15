@@ -3,7 +3,10 @@ require('dotenv').config()
 const express = require('express')
 const path = require('node:path')
 const {
+  bulkDeleteArtists,
   bulkUpdateArtists,
+  createArtist,
+  deleteArtist,
   getArtists,
   getStats,
   setupDatabase,
@@ -44,6 +47,15 @@ app.get('/api/stats', async (_req, res, next) => {
   }
 })
 
+app.post('/api/artists', async (req, res, next) => {
+  try {
+    const artist = await createArtist(req.body ?? {})
+    res.status(201).json({ artist })
+  } catch (error) {
+    next(error)
+  }
+})
+
 app.patch('/api/artists/:id', async (req, res, next) => {
   try {
     const artist = await updateArtist(req.params.id, req.body ?? {})
@@ -63,6 +75,30 @@ app.post('/api/artists/bulk', async (req, res, next) => {
   try {
     const artists = await bulkUpdateArtists(req.body ?? {})
     res.json({ artists })
+  } catch (error) {
+    next(error)
+  }
+})
+
+app.post('/api/artists/bulk-delete', async (req, res, next) => {
+  try {
+    const ids = await bulkDeleteArtists(req.body?.ids ?? [])
+    res.json({ ids })
+  } catch (error) {
+    next(error)
+  }
+})
+
+app.delete('/api/artists/:id', async (req, res, next) => {
+  try {
+    const deleted = await deleteArtist(req.params.id)
+
+    if (!deleted) {
+      res.status(404).json({ error: 'Artist not found' })
+      return
+    }
+
+    res.json({ ok: true })
   } catch (error) {
     next(error)
   }

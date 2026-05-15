@@ -3,17 +3,27 @@ import {
   ChevronRight,
   Download,
   LayoutGrid,
+  Plus,
   RefreshCw,
   Search,
   Table2,
+  Trash2,
 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import './App.css'
 import { ArtistCardGrid } from './components/ArtistCardGrid'
 import { ArtistDetailPanel } from './components/ArtistDetailPanel'
+import { ArtistFormModal } from './components/ArtistFormModal'
 import { LockScreen } from './components/LockScreen'
 import { initialArtists, type SignatureStatus } from './data/artists'
-import { bulkPatchArtists, fetchArtists, patchArtist } from './api/artists'
+import {
+  bulkDeleteArtists,
+  bulkPatchArtists,
+  createArtist,
+  deleteArtist,
+  fetchArtists,
+  patchArtist,
+} from './api/artists'
 import { useUnlockGate } from './hooks/useUnlockGate'
 import type { CrmArtist, OwnerFilter, SaveStatus, SortOption, StatusFilter, ViewMode } from './types'
 
@@ -65,6 +75,8 @@ function App() {
   const [cardPageSize, setCardPageSize] = useState<(typeof CARD_PAGE_SIZES)[number]>(48)
   const [tablePageSize, setTablePageSize] = useState<(typeof TABLE_PAGE_SIZES)[number]>(50)
   const [focusedArtistId, setFocusedArtistId] = useState<string | null>(null)
+  const [formMode, setFormMode] = useState<'create' | 'edit' | null>(null)
+  const [editingArtist, setEditingArtist] = useState<CrmArtist | null>(null)
 
   const pageSize = viewMode === 'cards' ? cardPageSize : tablePageSize
   const pageSizes = viewMode === 'cards' ? CARD_PAGE_SIZES : TABLE_PAGE_SIZES
@@ -246,6 +258,83 @@ function App() {
     })
   }
 
+  const handleCreateArtist = async (payload: Partial<CrmArtist>) => {
+    setSaveStatus('saving')
+    try {
+      const created = await createArtist({
+        ...payload,
+        priority: priorityForStatus(payload.status ?? 'unsigned'),
+      })
+      setArtists((current) => [...current, created].sort((a, b) => a.nameHe.localeCompare(b.nameHe, 'he')))
+      setSaveStatus('idle')
+      setServerError('')
+    } catch (error) {
+      setServerError(error instanceof Error ? error.message : 'יצירת אומן נכשלה')
+      setSaveStatus('error')
+      throw error
+    }
+  }
+
+  const handleEditArtist = async (payload: Partial<CrmArtist>) => {
+    if (!editingArtist) return
+    await updateArtist(editingArtist.id, {
+      ...payload,
+      priority: priorityForStatus(payload.status ?? editingArtist.status),
+    })
+  }
+
+  const handleDeleteArtist = async (artist: CrmArtist) => {
+    const name = artist.nameHe || artist.nameEn || 'אומן זה'
+    if (!window.confirm(`למחוק את "${name}"?`)) return
+
+    setSaveStatus('saving')
+    try {
+      await deleteArtist(artist.id)
+      setArtists((current) => current.filter((item) => item.id !== artist.id))
+      setSelectedIds((prev) => {
+        const next = new Set(prev)
+        next.delete(artist.id)
+        return next
+      })
+      if (focusedArtistId === artist.id) setFocusedArtistId(null)
+      setSaveStatus('idle')
+      setServerError('')
+    } catch (error) {
+      setServerError(error instanceof Error ? error.message : 'מחיקה נכשלה')
+      setSaveStatus('error')
+    }
+  }
+
+  const applyBulkDelete = async () => {
+    if (selectedCount === 0) return
+    if (!window.confirm(`למחוק ${selectedCount} אומנים שנבחרו?`)) return
+
+    setSaveStatus('saving')
+    const ids = [...selectedIds]
+    try {
+      await bulkDeleteArtists(ids)
+      setArtists((current) => current.filter((artist) => !selectedIds.has(artist.id)))
+      setSelectedIds(new Set())
+      if (focusedArtistId && ids.includes(focusedArtistId)) setFocusedArtistId(null)
+      setSaveStatus('idle')
+      setServerError('')
+    } catch (error) {
+      setServerError(error instanceof Error ? error.message : 'מחיקה מרוכזת נכשלה')
+      setSaveStatus('error')
+    }
+  }
+
+  const selectAllFiltered = () => {
+    if (filteredArtists.length === 0) return
+    if (filteredArtists.length > 500) {
+      const ok = window.confirm(
+        `לבחור ${filteredArtists.length.toLocaleString('he-IL')} אומנים? פעולה זו עלולה להיות כבדה.`,
+      )
+      if (!ok) return
+    }
+    setSelectedIds(new Set(filteredArtists.map((artist) => artist.id)))
+  }
+
   const applyBulkTreatment = async () => {
     if (selectedCount === 0) return
 
@@ -371,6 +460,17 @@ function App() {
             <Download size={14} />
             ייצוא
           </button>
+          <button
+            className="btn btn-primary"
+            type="button"
+            onClick={() => {
+              setEditingArtist(null)
+              setFormMode('create')
+            }}
+          >
+            <Plus size={14} />
+            אומן חדש
+          </button>
         </div>
       </header>
 
@@ -449,6 +549,10 @@ function App() {
           דורש פעולה
         </label>
 
+        <button className="btn btn-ghost" type="button" onClick={selectAllFiltered}>
+          בחר את כל התוצאות
+        </button>
+
         {selectedCount > 0 && (
           <>
             <span className="toolbar-divider" />
@@ -467,7 +571,14 @@ function App() {
                 ))}
               </select>
               <button className="btn btn-primary" type="button" onClick={() => void applyBulkTreatment()}>
-                החל
+                עדכון מרוכז
+              </button>
+              <button className="btn btn-danger" type="button" onClick={() => void applyBulkDelete()}>
+                <Trash2 size={14} />
+                מחק נבחרים
+              </button>
+              <button className="btn btn-ghost" type="button" onClick={() => setSelectedIds(new Set())}>
+                נקה בחירה
               </button>
             </div>
           </>
@@ -654,10 +765,26 @@ function App() {
       {focusedArtist && (
         <ArtistDetailPanel
           artist={focusedArtist}
-          handlers={handlers}
           statusMeta={statusMeta}
           onClose={() => setFocusedArtistId(null)}
-          onUpdate={(id, patch) => void updateArtist(id, patch)}
+          onEdit={(artist) => {
+            setEditingArtist(artist)
+            setFormMode('edit')
+          }}
+          onDelete={(artist) => void handleDeleteArtist(artist)}
+        />
+      )}
+
+      {formMode && (
+        <ArtistFormModal
+          mode={formMode}
+          artist={formMode === 'edit' ? editingArtist ?? undefined : undefined}
+          handlers={handlers}
+          onClose={() => {
+            setFormMode(null)
+            setEditingArtist(null)
+          }}
+          onSave={formMode === 'create' ? handleCreateArtist : handleEditArtist}
         />
       )}
     </div>
