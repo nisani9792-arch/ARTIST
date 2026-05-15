@@ -45,7 +45,7 @@ const formatCsvValue = (value: string | string[]) => {
 }
 
 function App() {
-  const { unlocked, pressCount, requiredPresses } = useUnlockGate()
+  const { unlocked, unlock } = useUnlockGate()
 
   const [artists, setArtists] = useState<CrmArtist[]>(readInitialArtists)
   const [viewMode, setViewMode] = useState<ViewMode>('cards')
@@ -307,7 +307,7 @@ function App() {
     visibleArtists.length > 0 && visibleArtists.every((a) => selectedIds.has(a.id))
 
   if (!unlocked) {
-    return <LockScreen pressCount={pressCount} requiredPresses={requiredPresses} />
+    return <LockScreen onUnlock={unlock} />
   }
 
   return (

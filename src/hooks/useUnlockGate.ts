@@ -1,35 +1,40 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 
 const STORAGE_KEY = 'artist-crm-unlocked'
 const RESET_MS = 1600
+const REQUIRED_PRESSES = 3
 
 export const useUnlockGate = () => {
   const [unlocked, setUnlocked] = useState(
     () => typeof sessionStorage !== 'undefined' && sessionStorage.getItem(STORAGE_KEY) === '1',
   )
-  const [pressCount, setPressCount] = useState(0)
+
+  const unlock = useCallback(() => {
+    sessionStorage.setItem(STORAGE_KEY, '1')
+    setUnlocked(true)
+  }, [])
 
   useEffect(() => {
     if (unlocked) return
 
     let resetTimer: ReturnType<typeof setTimeout> | undefined
+    let pressCount = 0
 
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.code !== 'Space' && event.key !== ' ') return
       event.preventDefault()
 
-      setPressCount((current) => {
-        const next = current + 1
-        if (next >= 3) {
-          sessionStorage.setItem(STORAGE_KEY, '1')
-          setUnlocked(true)
-          return 0
-        }
-        return next
-      })
+      pressCount += 1
+      if (pressCount >= REQUIRED_PRESSES) {
+        unlock()
+        pressCount = 0
+        return
+      }
 
       clearTimeout(resetTimer)
-      resetTimer = setTimeout(() => setPressCount(0), RESET_MS)
+      resetTimer = setTimeout(() => {
+        pressCount = 0
+      }, RESET_MS)
     }
 
     window.addEventListener('keydown', onKeyDown)
@@ -37,7 +42,7 @@ export const useUnlockGate = () => {
       window.removeEventListener('keydown', onKeyDown)
       clearTimeout(resetTimer)
     }
-  }, [unlocked])
+  }, [unlocked, unlock])
 
-  return { unlocked, pressCount, requiredPresses: 3 }
+  return { unlocked, unlock }
 }
