@@ -2,7 +2,26 @@ require('dotenv').config()
 
 const { neon } = require('@neondatabase/serverless')
 
-const databaseUrl = process.env.DATABASE_URL
+/** Handles .env lines or quoted values pasted into DATABASE_URL (e.g. on Render). */
+const normalizeDatabaseUrl = (raw) => {
+  if (raw == null || typeof raw !== 'string') {
+    return raw
+  }
+
+  let s = raw.trim()
+  s = s.replace(/^DATABASE_URL\s*=\s*/i, '').trim()
+
+  while (
+    (s.startsWith("'") && s.endsWith("'")) ||
+    (s.startsWith('"') && s.endsWith('"'))
+  ) {
+    s = s.slice(1, -1).trim()
+  }
+
+  return s
+}
+
+const databaseUrl = normalizeDatabaseUrl(process.env.DATABASE_URL)
 
 if (!databaseUrl) {
   throw new Error('DATABASE_URL is missing. Create a .env file based on .env.example.')
