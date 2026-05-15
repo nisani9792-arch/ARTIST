@@ -2,24 +2,23 @@ import {
   ChevronLeft,
   ChevronRight,
   Download,
+  LayoutGrid,
   RefreshCw,
   Search,
+  Table2,
 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import './App.css'
-import { initialArtists, type ArtistRecord, type SignatureStatus } from './data/artists'
+import { ArtistCardGrid } from './components/ArtistCardGrid'
+import { ArtistDetailPanel } from './components/ArtistDetailPanel'
+import { LockScreen } from './components/LockScreen'
+import { initialArtists, type SignatureStatus } from './data/artists'
 import { bulkPatchArtists, fetchArtists, patchArtist } from './api/artists'
+import { useUnlockGate } from './hooks/useUnlockGate'
+import type { CrmArtist, OwnerFilter, SaveStatus, SortOption, StatusFilter, ViewMode } from './types'
 
-type CrmArtist = ArtistRecord & {
-  updatedAt?: string
-}
-
-type StatusFilter = SignatureStatus | 'all'
-type OwnerFilter = string | 'all'
-type SortOption = 'smart' | 'name' | 'status' | 'tags'
-type SaveStatus = 'idle' | 'loading' | 'saving' | 'error'
-
-const PAGE_SIZES = [50, 100, 200] as const
+const CARD_PAGE_SIZES = [48, 96, 144] as const
+const TABLE_PAGE_SIZES = [50, 100, 200] as const
 
 const handlers = ['לא שויך', 'שימון', 'ניהול זכויות', 'סוכן חיצוני', 'מעקב חוזים', 'שימור קשר']
 
@@ -27,6 +26,12 @@ const statusMeta: Record<SignatureStatus, { label: string; tone: string }> = {
   signed: { label: 'חתום', tone: 'signed' },
   unsigned: { label: 'לא חתום', tone: 'unsigned' },
   stuck: { label: 'תקוע', tone: 'stuck' },
+}
+
+const priorityForStatus = (status: SignatureStatus) => {
+  if (status === 'signed') return 'שימור קשר'
+  if (status === 'stuck') return 'פתיחת חסם'
+  return 'ליצירת קשר'
 }
 
 const normalize = (value: string) => value.toLocaleLowerCase('he-IL').trim()
@@ -40,7 +45,10 @@ const formatCsvValue = (value: string | string[]) => {
 }
 
 function App() {
+  const { unlocked, pressCount, requiredPresses } = useUnlockGate()
+
   const [artists, setArtists] = useState<CrmArtist[]>(readInitialArtists)
+  const [viewMode, setViewMode] = useState<ViewMode>('cards')
   const [query, setQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [ownerFilter, setOwnerFilter] = useState<OwnerFilter>('all')
@@ -54,7 +62,12 @@ function App() {
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('loading')
   const [serverError, setServerError] = useState('')
   const [page, setPage] = useState(1)
-  const [pageSize, setPageSize] = useState<(typeof PAGE_SIZES)[number]>(50)
+  const [cardPageSize, setCardPageSize] = useState<(typeof CARD_PAGE_SIZES)[number]>(48)
+  const [tablePageSize, setTablePageSize] = useState<(typeof TABLE_PAGE_SIZES)[number]>(50)
+  const [focusedArtistId, setFocusedArtistId] = useState<string | null>(null)
+
+  const pageSize = viewMode === 'cards' ? cardPageSize : tablePageSize
+  const pageSizes = viewMode === 'cards' ? CARD_PAGE_SIZES : TABLE_PAGE_SIZES
 
   const loadArtists = async () => {
     setSaveStatus('loading')
@@ -71,6 +84,8 @@ function App() {
   }
 
   useEffect(() => {
+    if (!unlocked) return
+
     let isActive = true
 
     fetchArtists()
@@ -88,7 +103,7 @@ function App() {
     return () => {
       isActive = false
     }
-  }, [])
+  }, [unlocked])
 
   const replaceArtists = (updatedArtists: CrmArtist[]) => {
     const updatedById = new Map(updatedArtists.map((artist) => [artist.id, artist]))
@@ -200,13 +215,16 @@ function App() {
 
   useEffect(() => {
     setPage(1)
-  }, [query, statusFilter, ownerFilter, tagFilter, genreFilter, needsActionOnly, sortBy, pageSize])
+  }, [query, statusFilter, ownerFilter, tagFilter, genreFilter, needsActionOnly, sortBy, pageSize, viewMode])
 
   const totalPages = Math.max(1, Math.ceil(filteredArtists.length / pageSize))
   const safePage = Math.min(page, totalPages)
   const pageStart = (safePage - 1) * pageSize
   const visibleArtists = filteredArtists.slice(pageStart, pageStart + pageSize)
   const selectedCount = selectedIds.size
+  const focusedArtist = focusedArtistId
+    ? artists.find((artist) => artist.id === focusedArtistId) ?? null
+    : null
 
   const toggleSelected = (artistId: string) => {
     setSelectedIds((prev) => {
@@ -239,12 +257,7 @@ function App() {
               ...artist,
               status: bulkStatus,
               owner: bulkOwner,
-              priority:
-                bulkStatus === 'signed'
-                  ? 'שימור קשר'
-                  : bulkStatus === 'stuck'
-                    ? 'פתיחת חסם'
-                    : 'ליצירת קשר',
+              priority: priorityForStatus(bulkStatus),
               updatedAt: new Date().toISOString(),
             }
           : artist,
@@ -255,12 +268,7 @@ function App() {
       const updatedArtists = await bulkPatchArtists({
         ids: [...selectedIds],
         owner: bulkOwner,
-        priority:
-          bulkStatus === 'signed'
-            ? 'שימור קשר'
-            : bulkStatus === 'stuck'
-              ? 'פתיחת חסם'
-              : 'ליצירת קשר',
+        priority: priorityForStatus(bulkStatus),
         status: bulkStatus,
       })
       replaceArtists(updatedArtists)
@@ -298,6 +306,10 @@ function App() {
   const pageAllSelected =
     visibleArtists.length > 0 && visibleArtists.every((a) => selectedIds.has(a.id))
 
+  if (!unlocked) {
+    return <LockScreen pressCount={pressCount} requiredPresses={requiredPresses} />
+  }
+
   return (
     <div className="app" dir="rtl">
       <header className="app-header">
@@ -319,12 +331,27 @@ function App() {
           <span className="stat-pill stuck">
             תקועים <strong>{stats.stuck.toLocaleString('he-IL')}</strong>
           </span>
-          <span className="stat-pill">
-            ללא מטפל <strong>{stats.unassigned.toLocaleString('he-IL')}</strong>
-          </span>
         </div>
 
         <div className="header-actions">
+          <div className="view-toggle" role="group" aria-label="תצוגה">
+            <button
+              type="button"
+              className={`btn btn-icon ${viewMode === 'cards' ? 'active' : ''}`}
+              onClick={() => setViewMode('cards')}
+              title="כרטיסיות"
+            >
+              <LayoutGrid size={15} />
+            </button>
+            <button
+              type="button"
+              className={`btn btn-icon ${viewMode === 'table' ? 'active' : ''}`}
+              onClick={() => setViewMode('table')}
+              title="טבלה"
+            >
+              <Table2 size={15} />
+            </button>
+          </div>
           <span
             className={`status-dot ${saveStatus}`}
             title={
@@ -337,12 +364,7 @@ function App() {
                     : 'מחובר'
             }
           />
-          <button
-            className="btn btn-ghost btn-icon"
-            type="button"
-            onClick={() => void loadArtists()}
-            title="רענון"
-          >
+          <button className="btn btn-ghost btn-icon" type="button" onClick={() => void loadArtists()} title="רענון">
             <RefreshCw size={15} />
           </button>
           <button className="btn btn-ghost" type="button" onClick={exportCsv}>
@@ -364,12 +386,25 @@ function App() {
           />
         </label>
 
-        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}>
-          <option value="all">כל הסטטוסים</option>
-          <option value="signed">חתום</option>
-          <option value="unsigned">לא חתום</option>
-          <option value="stuck">תקוע</option>
-        </select>
+        <div className="quick-filters" role="group" aria-label="סינון מהיר">
+          {(
+            [
+              ['all', 'הכל'],
+              ['signed', 'חתום'],
+              ['unsigned', 'לא חתום'],
+              ['stuck', 'תקוע'],
+            ] as const
+          ).map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              className={`chip-filter ${statusFilter === value ? 'active' : ''}`}
+              onClick={() => setStatusFilter(value)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
 
         <select value={ownerFilter} onChange={(e) => setOwnerFilter(e.target.value)}>
           <option value="all">כל המטפלים</option>
@@ -440,131 +475,136 @@ function App() {
       </div>
 
       <div className="app-body">
-        <div className="table-wrap">
-          <table className="crm-table">
-            <thead>
-              <tr>
-                <th className="col-check">
-                  <input
-                    type="checkbox"
-                    checked={pageAllSelected}
-                    onChange={togglePageSelection}
-                    aria-label="בחר עמוד"
-                  />
-                </th>
-                <th className="col-status">סטטוס</th>
-                <th className="col-name">שם</th>
-                <th className="col-en">אנגלית</th>
-                <th className="col-tags">ז׳אנר / תגיות</th>
-                <th className="col-album">אלבום</th>
-                <th className="col-owner">מטפל</th>
-                <th className="col-status-select">עדכון</th>
-                <th className="col-notes">הערות</th>
-              </tr>
-            </thead>
-            <tbody>
-              {visibleArtists.length === 0 ? (
-                <tr>
-                  <td colSpan={9}>
-                    <div className="empty-state">
-                      {saveStatus === 'loading' ? 'טוען נתונים...' : 'לא נמצאו אומנים לפי הסינון'}
-                    </div>
-                  </td>
-                </tr>
-              ) : (
-                visibleArtists.map((artist) => {
-                  const meta = statusMeta[artist.status]
-                  const tagText = [...artist.genres, ...artist.tags].slice(0, 4).join(' · ')
-
-                  return (
-                    <tr key={artist.id} className={selectedIds.has(artist.id) ? 'selected' : undefined}>
-                      <td className="col-check">
-                        <input
-                          type="checkbox"
-                          checked={selectedIds.has(artist.id)}
-                          onChange={() => toggleSelected(artist.id)}
-                          aria-label={`בחר ${artist.nameHe}`}
-                        />
-                      </td>
-                      <td className="col-status">
-                        <span className={`badge ${meta.tone}`}>{meta.label}</span>
-                      </td>
-                      <td className="col-name">
-                        <span className="name-cell" title={artist.nameHe}>
-                          {artist.nameHe || artist.nameEn}
-                        </span>
-                      </td>
-                      <td className="col-en">
-                        <span className="tag-line" title={artist.nameEn}>
-                          {artist.nameEn}
-                        </span>
-                      </td>
-                      <td className="col-tags">
-                        <span className="tag-line" title={tagText}>
-                          {tagText || '—'}
-                        </span>
-                      </td>
-                      <td className="col-album">
-                        <span className="tag-line" title={artist.latestAlbum}>
-                          {artist.latestAlbum || '—'}
-                        </span>
-                      </td>
-                      <td className="col-owner">
-                        <select
-                          className="cell-select"
-                          value={artist.owner}
-                          onChange={(e) => void updateArtist(artist.id, { owner: e.target.value })}
-                        >
-                          {handlers.map((h) => (
-                            <option key={h} value={h}>
-                              {h}
-                            </option>
-                          ))}
-                        </select>
-                      </td>
-                      <td className="col-status-select">
-                        <select
-                          className="cell-select"
-                          value={artist.status}
-                          onChange={(e) => {
-                            const status = e.target.value as SignatureStatus
-                            void updateArtist(artist.id, {
-                              status,
-                              priority:
-                                status === 'signed'
-                                  ? 'שימור קשר'
-                                  : status === 'stuck'
-                                    ? 'פתיחת חסם'
-                                    : 'ליצירת קשר',
-                            })
-                          }}
-                        >
-                          <option value="signed">חתום</option>
-                          <option value="unsigned">לא חתום</option>
-                          <option value="stuck">תקוע</option>
-                        </select>
-                      </td>
-                      <td className="col-notes">
-                        <input
-                          className="cell-notes"
-                          value={artist.notes}
-                          onChange={(e) =>
-                            setArtists((current) =>
-                              current.map((a) =>
-                                a.id === artist.id ? { ...a, notes: e.target.value } : a,
-                              ),
-                            )
-                          }
-                          onBlur={(e) => void updateArtist(artist.id, { notes: e.target.value })}
-                          placeholder="הערה"
-                        />
+        <div className="content-wrap">
+          {viewMode === 'cards' ? (
+            <ArtistCardGrid
+              artists={visibleArtists}
+              handlers={handlers}
+              statusMeta={statusMeta}
+              selectedIds={selectedIds}
+              isLoading={saveStatus === 'loading'}
+              onToggleSelect={toggleSelected}
+              onUpdate={(id, patch) => void updateArtist(id, patch)}
+              onOpen={(artist) => setFocusedArtistId(artist.id)}
+            />
+          ) : (
+            <div className="table-wrap">
+              <table className="crm-table">
+                <thead>
+                  <tr>
+                    <th className="col-check">
+                      <input
+                        type="checkbox"
+                        checked={pageAllSelected}
+                        onChange={togglePageSelection}
+                        aria-label="בחר עמוד"
+                      />
+                    </th>
+                    <th className="col-status">סטטוס</th>
+                    <th className="col-name">שם</th>
+                    <th className="col-en">אנגלית</th>
+                    <th className="col-tags">ז׳אנר / תגיות</th>
+                    <th className="col-album">אלבום</th>
+                    <th className="col-owner">מטפל</th>
+                    <th className="col-status-select">עדכון</th>
+                    <th className="col-notes">הערות</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {visibleArtists.length === 0 ? (
+                    <tr>
+                      <td colSpan={9}>
+                        <div className="empty-state">
+                          {saveStatus === 'loading' ? 'טוען נתונים...' : 'לא נמצאו אומנים'}
+                        </div>
                       </td>
                     </tr>
-                  )
-                })
-              )}
-            </tbody>
-          </table>
+                  ) : (
+                    visibleArtists.map((artist) => {
+                      const meta = statusMeta[artist.status]
+                      const tagText = [...artist.genres, ...artist.tags].slice(0, 4).join(' · ')
+
+                      return (
+                        <tr
+                          key={artist.id}
+                          className={selectedIds.has(artist.id) ? 'selected' : undefined}
+                          onClick={() => setFocusedArtistId(artist.id)}
+                        >
+                          <td className="col-check" onClick={(e) => e.stopPropagation()}>
+                            <input
+                              type="checkbox"
+                              checked={selectedIds.has(artist.id)}
+                              onChange={() => toggleSelected(artist.id)}
+                            />
+                          </td>
+                          <td className="col-status">
+                            <span className={`badge ${meta.tone}`}>{meta.label}</span>
+                          </td>
+                          <td className="col-name">
+                            <span className="name-cell">{artist.nameHe || artist.nameEn}</span>
+                          </td>
+                          <td className="col-en">
+                            <span className="tag-line">{artist.nameEn}</span>
+                          </td>
+                          <td className="col-tags">
+                            <span className="tag-line">{tagText || '—'}</span>
+                          </td>
+                          <td className="col-album">
+                            <span className="tag-line">{artist.latestAlbum || '—'}</span>
+                          </td>
+                          <td className="col-owner" onClick={(e) => e.stopPropagation()}>
+                            <select
+                              className="cell-select"
+                              value={artist.owner}
+                              onChange={(e) => void updateArtist(artist.id, { owner: e.target.value })}
+                            >
+                              {handlers.map((h) => (
+                                <option key={h} value={h}>
+                                  {h}
+                                </option>
+                              ))}
+                            </select>
+                          </td>
+                          <td className="col-status-select" onClick={(e) => e.stopPropagation()}>
+                            <select
+                              className="cell-select"
+                              value={artist.status}
+                              onChange={(e) => {
+                                const status = e.target.value as SignatureStatus
+                                void updateArtist(artist.id, {
+                                  status,
+                                  priority: priorityForStatus(status),
+                                })
+                              }}
+                            >
+                              <option value="signed">חתום</option>
+                              <option value="unsigned">לא חתום</option>
+                              <option value="stuck">תקוע</option>
+                            </select>
+                          </td>
+                          <td className="col-notes" onClick={(e) => e.stopPropagation()}>
+                            <input
+                              className="cell-notes"
+                              value={artist.notes}
+                              onChange={(e) =>
+                                setArtists((current) =>
+                                  current.map((a) =>
+                                    a.id === artist.id ? { ...a, notes: e.target.value } : a,
+                                  ),
+                                )
+                              }
+                              onBlur={(e) => void updateArtist(artist.id, { notes: e.target.value })}
+                              placeholder="הערה"
+                            />
+                          </td>
+                        </tr>
+                      )
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       </div>
 
@@ -577,12 +617,16 @@ function App() {
         <div className="pagination">
           <select
             value={pageSize}
-            onChange={(e) => setPageSize(Number(e.target.value) as (typeof PAGE_SIZES)[number])}
-            aria-label="שורות בעמוד"
+            onChange={(e) => {
+              const size = Number(e.target.value)
+              if (viewMode === 'cards') setCardPageSize(size as (typeof CARD_PAGE_SIZES)[number])
+              else setTablePageSize(size as (typeof TABLE_PAGE_SIZES)[number])
+            }}
+            aria-label="פריטים בעמוד"
           >
-            {PAGE_SIZES.map((size) => (
+            {pageSizes.map((size) => (
               <option key={size} value={size}>
-                {size} בשורה
+                {size} בעמוד
               </option>
             ))}
           </select>
@@ -606,6 +650,16 @@ function App() {
           </button>
         </div>
       </footer>
+
+      {focusedArtist && (
+        <ArtistDetailPanel
+          artist={focusedArtist}
+          handlers={handlers}
+          statusMeta={statusMeta}
+          onClose={() => setFocusedArtistId(null)}
+          onUpdate={(id, patch) => void updateArtist(id, patch)}
+        />
+      )}
     </div>
   )
 }

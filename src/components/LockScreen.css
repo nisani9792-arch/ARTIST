@@ -1,0 +1,86 @@
+.lock-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background:
+    radial-gradient(circle at 50% 20%, rgba(43, 218, 229, 0.18), transparent 55%),
+    linear-gradient(160deg, #0a1218 0%, #111c24 45%, #0d161d 100%);
+}
+
+.lock-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  width: min(360px, 100%);
+  padding: 32px 28px 28px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(12px);
+}
+
+.lock-logo {
+  width: 88px;
+  height: 88px;
+  border-radius: 18px;
+  object-fit: cover;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+}
+
+.lock-icon-wrap {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  margin-top: -8px;
+  border-radius: 50%;
+  color: var(--accent);
+  background: rgba(43, 218, 229, 0.12);
+  border: 1px solid rgba(43, 218, 229, 0.25);
+}
+
+.lock-title {
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: #f4fbfc;
+}
+
+.lock-hint {
+  font-size: 13px;
+  color: rgba(244, 251, 252, 0.72);
+  text-align: center;
+  line-height: 1.5;
+}
+
+.lock-progress {
+  display: flex;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.lock-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.18);
+  transition: transform 180ms ease, background 180ms ease;
+}
+
+.lock-dot.active {
+  background: var(--accent);
+  transform: scale(1.15);
+  box-shadow: 0 0 12px rgba(43, 218, 229, 0.65);
+}
+
+.lock-counter {
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(244, 251, 252, 0.5);
+  min-height: 18px;
+}
