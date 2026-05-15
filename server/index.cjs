@@ -8,6 +8,7 @@ const {
   createArtist,
   deleteArtist,
   getArtists,
+  getBackupPayload,
   getStats,
   setupDatabase,
   updateArtist,
@@ -33,6 +34,18 @@ app.get('/api/artists', async (_req, res, next) => {
   try {
     const artists = await getArtists()
     res.json({ artists })
+  } catch (error) {
+    next(error)
+  }
+})
+
+app.get('/api/backup', async (_req, res, next) => {
+  try {
+    const backup = await getBackupPayload()
+    const stamp = backup.exportedAt.slice(0, 19).replace(/[:T]/g, '-')
+    res.setHeader('Content-Type', 'application/json; charset=utf-8')
+    res.setHeader('Content-Disposition', `attachment; filename="artist-backup-${stamp}.json"`)
+    res.json(backup)
   } catch (error) {
     next(error)
   }

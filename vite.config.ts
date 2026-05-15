@@ -23,9 +23,11 @@ export default defineConfig({
         description: 'מערכת CRM חכמה לניהול אומנים חתומים ולא חתומים',
         lang: 'he-IL',
         dir: 'rtl',
-        theme_color: '#f5fbfb',
-        background_color: '#f5fbfb',
+        theme_color: '#f4f7f9',
+        background_color: '#f4f7f9',
         display: 'standalone',
+        orientation: 'portrait',
+        categories: ['business', 'productivity'],
         start_url: '/',
         scope: '/',
         icons: [

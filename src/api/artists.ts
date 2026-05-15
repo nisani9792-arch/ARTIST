@@ -85,3 +85,40 @@ export const bulkDeleteArtists = async (ids: string[]) => {
   })
   return response.ids
 }
+
+export type BackupPayload = {
+  version: number
+  exportedAt: string
+  service: string
+  stats: {
+    total: number
+    signed: number
+    unsigned: number
+    stuck: number
+    unassigned: number
+  }
+  count: number
+  artists: CrmArtist[]
+}
+
+export const downloadBackup = async () => {
+  const response = await fetch('/api/backup')
+  if (!response.ok) {
+    throw new Error('יצירת גיבוי נכשלה')
+  }
+
+  const backup = (await response.json()) as BackupPayload
+  const stamp = backup.exportedAt.slice(0, 19).replace(/[:T]/g, '-')
+  const blob = new Blob([JSON.stringify(backup, null, 2)], {
+    type: 'application/json;charset=utf-8',
+  })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = `artist-backup-${stamp}.json`
+  link.click()
+  URL.revokeObjectURL(url)
+
+  localStorage.setItem('artist-last-backup', backup.exportedAt)
+  return backup
+}

@@ -1,6 +1,7 @@
 import {
   ChevronLeft,
   ChevronRight,
+  Database,
   Download,
   LayoutGrid,
   Plus,
@@ -14,18 +15,25 @@ import './App.css'
 import { ArtistCardGrid } from './components/ArtistCardGrid'
 import { ArtistDetailPanel } from './components/ArtistDetailPanel'
 import { ArtistFormModal } from './components/ArtistFormModal'
+import { InstallPrompt } from './components/InstallPrompt'
 import { LockScreen } from './components/LockScreen'
+import { MobileBottomBar } from './components/MobileBottomBar'
 import { initialArtists, type SignatureStatus } from './data/artists'
 import {
   bulkDeleteArtists,
   bulkPatchArtists,
   createArtist,
   deleteArtist,
+  downloadBackup,
   fetchArtists,
   patchArtist,
 } from './api/artists'
+import { useOnlineStatus } from './hooks/useOnlineStatus'
 import { useUnlockGate } from './hooks/useUnlockGate'
 import type { CrmArtist, OwnerFilter, SaveStatus, SortOption, StatusFilter, ViewMode } from './types'
+
+const BACKUP_REMINDER_DAYS = 7
+const LAST_BACKUP_KEY = 'artist-last-backup'
 
 const CARD_PAGE_SIZES = [48, 96, 144] as const
 const TABLE_PAGE_SIZES = [50, 100, 200] as const
@@ -56,6 +64,7 @@ const formatCsvValue = (value: string | string[]) => {
 
 function App() {
   const { unlocked, unlock } = useUnlockGate()
+  const online = useOnlineStatus()
 
   const [artists, setArtists] = useState<CrmArtist[]>(readInitialArtists)
   const [viewMode, setViewMode] = useState<ViewMode>('cards')
@@ -77,6 +86,22 @@ function App() {
   const [focusedArtistId, setFocusedArtistId] = useState<string | null>(null)
   const [formMode, setFormMode] = useState<'create' | 'edit' | null>(null)
   const [editingArtist, setEditingArtist] = useState<CrmArtist | null>(null)
+  const [filtersOpen, setFiltersOpen] = useState(false)
+  const [backupMessage, setBackupMessage] = useState('')
+
+  const lastBackupAt = useMemo(() => localStorage.getItem(LAST_BACKUP_KEY), [backupMessage])
+
+  const backupDue = useMemo(() => {
+    if (!lastBackupAt) return true
+    const elapsed = Date.now() - new Date(lastBackupAt).getTime()
+    return elapsed > BACKUP_REMINDER_DAYS * 24 * 60 * 60 * 1000
+  }, [lastBackupAt])
+
+  useEffect(() => {
+    if (window.matchMedia('(max-width: 768px)').matches) {
+      setViewMode('cards')
+    }
+  }, [])
 
   const pageSize = viewMode === 'cards' ? cardPageSize : tablePageSize
   const pageSizes = viewMode === 'cards' ? CARD_PAGE_SIZES : TABLE_PAGE_SIZES
@@ -370,6 +395,21 @@ function App() {
     }
   }
 
+  const runBackup = async () => {
+    setSaveStatus('saving')
+    setServerError('')
+    try {
+      const backup = await downloadBackup()
+      setBackupMessage(
+        `גיבוי הורד בהצלחה · ${new Date(backup.exportedAt).toLocaleString('he-IL')} · ${backup.count.toLocaleString('he-IL')} אומנים`,
+      )
+      setSaveStatus('idle')
+    } catch (error) {
+      setServerError(error instanceof Error ? error.message : 'יצירת גיבוי נכשלה')
+      setSaveStatus('error')
+    }
+  }
+
   const exportCsv = () => {
     const headers = ['שם', 'שם באנגלית', 'סטטוס', 'גורם מטפל', 'זאנרים', 'תגיות', 'אלבום', 'הערות']
     const rows = filteredArtists.map((artist) => [
@@ -401,13 +441,40 @@ function App() {
 
   return (
     <div className="app" dir="rtl">
+      <InstallPrompt />
+
+      {!online && (
+        <div className="app-alert offline-alert">
+          אין חיבור לאינטרנט — הנתונים נשמרים בשרת ודורשים חיבור לעדכון
+        </div>
+      )}
+
+      <div className="persist-banner">
+        <span>כל שינוי נשמר אוטומטית בשרת המאובטח</span>
+        <button className="btn btn-ghost btn-sm desktop-only" type="button" onClick={() => void runBackup()}>
+          <Database size={14} />
+          הורד גיבוי
+        </button>
+      </div>
+
+      {backupDue && !backupMessage && (
+        <div className="backup-reminder">
+          מומלץ להוריד גיבוי JSON לשמירה חיצונית (פעם בשבוע)
+          <button className="btn btn-primary btn-sm" type="button" onClick={() => void runBackup()}>
+            גיבוי עכשיו
+          </button>
+        </div>
+      )}
+
+      {backupMessage && <div className="backup-ok">{backupMessage}</div>}
+
       <header className="app-header">
         <div className="brand">
           <img src="/artist-logo.png" className="brand-logo" alt="ARTIST" width={32} height={32} />
           <span className="brand-title">ARTIST</span>
         </div>
 
-        <div className="header-stats" aria-label="סיכום">
+        <div className="header-stats mobile-stats-scroll" aria-label="סיכום">
           <span className="stat-pill">
             סה״כ <strong>{stats.total.toLocaleString('he-IL')}</strong>
           </span>
@@ -423,7 +490,7 @@ function App() {
         </div>
 
         <div className="header-actions">
-          <div className="view-toggle" role="group" aria-label="תצוגה">
+          <div className="view-toggle desktop-only" role="group" aria-label="תצוגה">
             <button
               type="button"
               className={`btn btn-icon ${viewMode === 'cards' ? 'active' : ''}`}
@@ -453,15 +520,24 @@ function App() {
                     : 'מחובר'
             }
           />
-          <button className="btn btn-ghost btn-icon" type="button" onClick={() => void loadArtists()} title="רענון">
+          <button
+            className="btn btn-ghost btn-icon desktop-only"
+            type="button"
+            onClick={() => void loadArtists()}
+            title="רענון"
+          >
             <RefreshCw size={15} />
           </button>
-          <button className="btn btn-ghost" type="button" onClick={exportCsv}>
+          <button className="btn btn-ghost desktop-only" type="button" onClick={exportCsv}>
             <Download size={14} />
             ייצוא
           </button>
+          <button className="btn btn-ghost desktop-only" type="button" onClick={() => void runBackup()}>
+            <Database size={14} />
+            גיבוי
+          </button>
           <button
-            className="btn btn-primary"
+            className="btn btn-primary desktop-only"
             type="button"
             onClick={() => {
               setEditingArtist(null)
@@ -476,7 +552,7 @@ function App() {
 
       {serverError && <div className="app-alert">{serverError}</div>}
 
-      <div className="toolbar">
+      <div className={`toolbar ${filtersOpen ? 'toolbar--open' : ''}`}>
         <label className="search-field">
           <Search size={14} />
           <input
@@ -486,6 +562,7 @@ function App() {
           />
         </label>
 
+        <div className="toolbar-panel">
         <div className="quick-filters" role="group" aria-label="סינון מהיר">
           {(
             [
@@ -552,6 +629,7 @@ function App() {
         <button className="btn btn-ghost" type="button" onClick={selectAllFiltered}>
           בחר את כל התוצאות
         </button>
+        </div>
 
         {selectedCount > 0 && (
           <>
@@ -787,6 +865,18 @@ function App() {
           onSave={formMode === 'create' ? handleCreateArtist : handleEditArtist}
         />
       )}
+
+      <MobileBottomBar
+        viewMode={viewMode}
+        filtersOpen={filtersOpen}
+        onToggleFilters={() => setFiltersOpen((open) => !open)}
+        onSetView={setViewMode}
+        onNewArtist={() => {
+          setEditingArtist(null)
+          setFormMode('create')
+        }}
+        onBackup={() => void runBackup()}
+      />
     </div>
   )
 }

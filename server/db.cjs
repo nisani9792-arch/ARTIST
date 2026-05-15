@@ -292,12 +292,27 @@ const upsertArtists = async (artists) => {
   `
 }
 
+const getBackupPayload = async () => {
+  const artists = await getArtists()
+  const stats = await getStats()
+
+  return {
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    service: 'ARTIST CRM',
+    stats,
+    count: artists.length,
+    artists,
+  }
+}
+
 module.exports = {
   bulkDeleteArtists,
   bulkUpdateArtists,
   createArtist,
   deleteArtist,
   getArtists,
+  getBackupPayload,
   getStats,
   setupDatabase,
   updateArtist,
