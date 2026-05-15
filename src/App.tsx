@@ -29,12 +29,10 @@ import {
   downloadBackup,
   fetchBootstrap,
   patchArtist,
-  setApiOperator,
 } from './api/artists'
 import { useDebouncedValue } from './hooks/useDebouncedValue'
 import { useOnlineStatus } from './hooks/useOnlineStatus'
-import { useOperator } from './hooks/useOperator'
-import { useUnlockGate } from './hooks/useUnlockGate'
+import { useAccessGate } from './hooks/useAccessGate'
 import { buildArtistSearchRows, computeHeaderStats, filterArtistRows } from './utils/filterArtists'
 import type { CrmArtist, OwnerFilter, SaveStatus, SortOption, StatusFilter, ViewMode } from './types'
 
@@ -64,13 +62,8 @@ const formatCsvValue = (value: string | string[]) => {
 }
 
 function App() {
-  const { unlocked, displayName: gateDisplayName, loading: gateLoading, unlock } = useUnlockGate()
-  const {
-    displayName: operatorName,
-    loading: operatorLoading,
-    error: operatorError,
-    register: registerOperator,
-  } = useOperator(unlocked, gateDisplayName)
+  const { phase, operatorName, error: operatorError, unlock, register: registerOperator } =
+    useAccessGate()
   const online = useOnlineStatus()
 
   const [artists, setArtists] = useState<CrmArtist[]>([])
@@ -97,10 +90,6 @@ function App() {
     if (!operatorName || patch.owner !== undefined) return patch
     return { ...patch, owner: operatorName }
   }
-
-  useEffect(() => {
-    setApiOperator(operatorName)
-  }, [operatorName])
 
   useEffect(() => {
     if (operatorName) setBulkOwner(operatorName)
@@ -148,7 +137,7 @@ function App() {
   }, [])
 
   useEffect(() => {
-    if (!unlocked || !operatorName) return
+    if (phase !== 'ready' || !operatorName) return
 
     let isActive = true
     setSaveStatus('loading')
@@ -168,7 +157,7 @@ function App() {
     return () => {
       isActive = false
     }
-  }, [unlocked, operatorName])
+  }, [phase, operatorName])
 
   const replaceArtists = (updatedArtists: CrmArtist[]) => {
     const updatedById = new Map(updatedArtists.map((artist) => [artist.id, artist]))
@@ -438,7 +427,7 @@ function App() {
   const pageAllSelected =
     visibleArtists.length > 0 && visibleArtists.every((a) => selectedIds.has(a.id))
 
-  if (gateLoading || (unlocked && operatorLoading)) {
+  if (phase === 'loading') {
     return (
       <div className="lock-screen" aria-busy="true" aria-label="טוען">
         <div className="lock-card loading-card">
@@ -454,11 +443,11 @@ function App() {
     )
   }
 
-  if (!unlocked) {
+  if (phase === 'locked') {
     return <LockScreen onUnlock={() => void unlock()} />
   }
 
-  if (!operatorName) {
+  if (phase === 'register') {
     return (
       <OperatorRegistration
         onRegister={registerOperator}

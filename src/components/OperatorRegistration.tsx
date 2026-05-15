@@ -47,7 +47,7 @@ export const OperatorRegistration = ({ onRegister, error }: OperatorRegistration
 
         <p className="lock-prompt">רישום לפעילות במערכת</p>
         <p className="operator-hint">
-          מכשיר זה זוהה לפי כתובת הרשת. הזינו שם משתמש — כל שינוי במערכת יירשם על שמכם כגורם מטפל.
+          הזינו שם משתמש — השם נשמר במכשיר זה וכל שינוי במערכת יירשם על שמכם כגורם מטפל.
         </p>
 
         <form className="lock-form" onSubmit={(e) => void handleSubmit(e)}>

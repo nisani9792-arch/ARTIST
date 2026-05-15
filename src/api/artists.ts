@@ -35,12 +35,6 @@ type BootstrapResponse = {
   stats: HeaderStats
 }
 
-let currentOperator: string | null = null
-
-export const setApiOperator = (name: string | null) => {
-  currentOperator = name
-}
-
 const parseError = async (response: Response) => {
   const text = await response.text()
   try {
@@ -56,7 +50,6 @@ const request = async <T>(url: string, options?: RequestInit): Promise<T> => {
   const response = await fetch(url, {
     headers: {
       'Content-Type': 'application/json',
-      ...(currentOperator ? { 'X-Operator': currentOperator } : {}),
       ...options?.headers,
     },
     ...options,
