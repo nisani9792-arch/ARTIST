@@ -1,11 +1,9 @@
 import {
-  CheckCircle2,
-  ClipboardList,
+  ChevronLeft,
+  ChevronRight,
   Download,
-  Filter,
+  RefreshCw,
   Search,
-  Sparkles,
-  UsersRound,
 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import './App.css'
@@ -19,40 +17,22 @@ type CrmArtist = ArtistRecord & {
 type StatusFilter = SignatureStatus | 'all'
 type OwnerFilter = string | 'all'
 type SortOption = 'smart' | 'name' | 'status' | 'tags'
+type SaveStatus = 'idle' | 'loading' | 'saving' | 'error'
 
-const DISPLAY_LIMIT = 240
+const PAGE_SIZES = [50, 100, 200] as const
 
 const handlers = ['לא שויך', 'שימון', 'ניהול זכויות', 'סוכן חיצוני', 'מעקב חוזים', 'שימור קשר']
 
-const statusMeta: Record<
-  SignatureStatus,
-  { label: string; tone: string; action: string; description: string }
-> = {
-  signed: {
-    label: 'חתום',
-    tone: 'green',
-    action: 'שימור קשר',
-    description: 'האומן חתום ומוכן לניהול קשר שוטף',
-  },
-  unsigned: {
-    label: 'לא חתום',
-    tone: 'red',
-    action: 'ליצירת קשר',
-    description: 'נדרש טיפול מסחרי או משפטי ראשוני',
-  },
-  stuck: {
-    label: 'תקוע',
-    tone: 'yellow',
-    action: 'פתיחת חסם',
-    description: 'יש חסם בתהליך וצריך בעלים ברור',
-  },
+const statusMeta: Record<SignatureStatus, { label: string; tone: string }> = {
+  signed: { label: 'חתום', tone: 'signed' },
+  unsigned: { label: 'לא חתום', tone: 'unsigned' },
+  stuck: { label: 'תקוע', tone: 'stuck' },
 }
 
 const normalize = (value: string) => value.toLocaleLowerCase('he-IL').trim()
 
-const readInitialArtists = (): CrmArtist[] => {
-  return initialArtists.map((artist) => ({ ...artist }))
-}
+const readInitialArtists = (): CrmArtist[] =>
+  initialArtists.map((artist) => ({ ...artist }))
 
 const formatCsvValue = (value: string | string[]) => {
   const text = Array.isArray(value) ? value.join(', ') : value
@@ -71,23 +51,22 @@ function App() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [bulkStatus, setBulkStatus] = useState<SignatureStatus>('unsigned')
   const [bulkOwner, setBulkOwner] = useState('שימון')
-  const [isLoading, setIsLoading] = useState(true)
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>('loading')
   const [serverError, setServerError] = useState('')
-  const [saveState, setSaveState] = useState('ממתין לסנכרון')
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState<(typeof PAGE_SIZES)[number]>(50)
 
   const loadArtists = async () => {
-    setIsLoading(true)
+    setSaveStatus('loading')
     setServerError('')
 
     try {
       const serverArtists = await fetchArtists()
       setArtists(serverArtists)
-      setSaveState('מסונכרן עם Neon')
+      setSaveStatus('idle')
     } catch (error) {
-      setServerError(error instanceof Error ? error.message : 'לא ניתן להתחבר לשרת Neon')
-      setSaveState('מצב גיבוי מקומי')
-    } finally {
-      setIsLoading(false)
+      setServerError(error instanceof Error ? error.message : 'לא ניתן להתחבר לשרת')
+      setSaveStatus('error')
     }
   }
 
@@ -96,25 +75,14 @@ function App() {
 
     fetchArtists()
       .then((serverArtists) => {
-        if (!isActive) {
-          return
-        }
-
+        if (!isActive) return
         setArtists(serverArtists)
-        setSaveState('מסונכרן עם Neon')
+        setSaveStatus('idle')
       })
       .catch((error) => {
-        if (!isActive) {
-          return
-        }
-
-        setServerError(error instanceof Error ? error.message : 'לא ניתן להתחבר לשרת Neon')
-        setSaveState('מצב גיבוי מקומי')
-      })
-      .finally(() => {
-        if (isActive) {
-          setIsLoading(false)
-        }
+        if (!isActive) return
+        setServerError(error instanceof Error ? error.message : 'לא ניתן להתחבר לשרת')
+        setSaveStatus('error')
       })
 
     return () => {
@@ -124,44 +92,37 @@ function App() {
 
   const replaceArtists = (updatedArtists: CrmArtist[]) => {
     const updatedById = new Map(updatedArtists.map((artist) => [artist.id, artist]))
-    setArtists((currentArtists) =>
-      currentArtists.map((artist) => updatedById.get(artist.id) ?? artist),
-    )
+    setArtists((current) => current.map((artist) => updatedById.get(artist.id) ?? artist))
   }
 
   const updateArtist = async (artistId: string, patch: Partial<CrmArtist>) => {
-    setSaveState('שומר ל-Neon...')
-    const nextArtists = artists.map((artist) =>
-      artist.id === artistId ? { ...artist, ...patch, updatedAt: new Date().toISOString() } : artist,
+    setSaveStatus('saving')
+    setArtists((current) =>
+      current.map((artist) =>
+        artist.id === artistId
+          ? { ...artist, ...patch, updatedAt: new Date().toISOString() }
+          : artist,
+      ),
     )
-    setArtists(nextArtists)
 
     try {
       const updatedArtist = await patchArtist(artistId, patch)
       replaceArtists([updatedArtist])
-      setSaveState('נשמר ב-Neon')
+      setSaveStatus('idle')
+      setServerError('')
     } catch (error) {
-      setServerError(error instanceof Error ? error.message : 'השמירה ל-Neon נכשלה')
-      setSaveState('שגיאת שמירה')
+      setServerError(error instanceof Error ? error.message : 'השמירה נכשלה')
+      setSaveStatus('error')
     }
   }
 
   const stats = useMemo(() => {
-    const signed = artists.filter((artist) => artist.status === 'signed').length
-    const unsigned = artists.filter((artist) => artist.status === 'unsigned').length
-    const stuck = artists.filter((artist) => artist.status === 'stuck').length
-    const unassigned = artists.filter((artist) => artist.owner === 'לא שויך').length
-    const touched = artists.filter((artist) => artist.updatedAt).length
+    const signed = artists.filter((a) => a.status === 'signed').length
+    const unsigned = artists.filter((a) => a.status === 'unsigned').length
+    const stuck = artists.filter((a) => a.status === 'stuck').length
+    const unassigned = artists.filter((a) => a.owner === 'לא שויך').length
 
-    return {
-      signed,
-      unsigned,
-      stuck,
-      unassigned,
-      touched,
-      total: artists.length,
-      signedRate: Math.round((signed / Math.max(artists.length, 1)) * 100),
-    }
+    return { signed, unsigned, stuck, unassigned, total: artists.length }
   }, [artists])
 
   const filterOptions = useMemo(() => {
@@ -176,7 +137,7 @@ function App() {
     }
 
     return {
-      tags: [...tags.entries()].sort((a, b) => b[1] - a[1]).slice(0, 120),
+      tags: [...tags.entries()].sort((a, b) => b[1] - a[1]).slice(0, 80),
       genres: [...genres].sort((a, b) => a.localeCompare(b, 'he')),
       owners: [...owners],
     }
@@ -224,98 +185,96 @@ function App() {
           (artist.status === 'stuck' ? 70 : 0) +
           (artist.status === 'unsigned' ? 45 : 0) +
           (artist.owner === 'לא שויך' ? 25 : 0) +
-          Math.min(artist.tags.length, 10) * 2 +
-          (artist.latestAlbum ? 4 : 0),
+          Math.min(artist.tags.length, 10) * 2,
       }))
 
     ranked.sort((a, b) => {
-      if (sortBy === 'name') {
-        return a.artist.nameHe.localeCompare(b.artist.nameHe, 'he')
-      }
-
-      if (sortBy === 'status') {
-        return a.artist.status.localeCompare(b.artist.status)
-      }
-
-      if (sortBy === 'tags') {
-        return b.artist.tags.length - a.artist.tags.length
-      }
-
+      if (sortBy === 'name') return a.artist.nameHe.localeCompare(b.artist.nameHe, 'he')
+      if (sortBy === 'status') return a.artist.status.localeCompare(b.artist.status)
+      if (sortBy === 'tags') return b.artist.tags.length - a.artist.tags.length
       return b.score - a.score
     })
 
     return ranked.map(({ artist }) => artist)
   }, [artists, genreFilter, needsActionOnly, ownerFilter, query, sortBy, statusFilter, tagFilter])
 
-  const visibleArtists = filteredArtists.slice(0, DISPLAY_LIMIT)
+  useEffect(() => {
+    setPage(1)
+  }, [query, statusFilter, ownerFilter, tagFilter, genreFilter, needsActionOnly, sortBy, pageSize])
+
+  const totalPages = Math.max(1, Math.ceil(filteredArtists.length / pageSize))
+  const safePage = Math.min(page, totalPages)
+  const pageStart = (safePage - 1) * pageSize
+  const visibleArtists = filteredArtists.slice(pageStart, pageStart + pageSize)
   const selectedCount = selectedIds.size
 
-  const smartLeads = useMemo(
-    () =>
-      filteredArtists
-        .filter((artist) => artist.status !== 'signed')
-        .slice(0, 3)
-        .map((artist) => artist.nameHe || artist.nameEn),
-    [filteredArtists],
-  )
-
   const toggleSelected = (artistId: string) => {
-    const next = new Set(selectedIds)
-    if (next.has(artistId)) {
-      next.delete(artistId)
-    } else {
-      next.add(artistId)
-    }
-    setSelectedIds(next)
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(artistId)) next.delete(artistId)
+      else next.add(artistId)
+      return next
+    })
   }
 
-  const selectVisible = () => {
-    setSelectedIds(new Set(visibleArtists.map((artist) => artist.id)))
+  const togglePageSelection = () => {
+    const pageIds = visibleArtists.map((a) => a.id)
+    const allSelected = pageIds.every((id) => selectedIds.has(id))
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (allSelected) pageIds.forEach((id) => next.delete(id))
+      else pageIds.forEach((id) => next.add(id))
+      return next
+    })
   }
 
   const applyBulkTreatment = async () => {
-    if (selectedCount === 0) {
-      return
-    }
+    if (selectedCount === 0) return
 
-    setSaveState('שומר טיפול מרוכז...')
-    const nextArtists = artists.map((artist) =>
-      selectedIds.has(artist.id)
-        ? {
-            ...artist,
-            status: bulkStatus,
-            owner: bulkOwner,
-            priority: statusMeta[bulkStatus].action,
-            updatedAt: new Date().toISOString(),
-          }
-        : artist,
+    setSaveStatus('saving')
+    setArtists((current) =>
+      current.map((artist) =>
+        selectedIds.has(artist.id)
+          ? {
+              ...artist,
+              status: bulkStatus,
+              owner: bulkOwner,
+              priority:
+                bulkStatus === 'signed'
+                  ? 'שימור קשר'
+                  : bulkStatus === 'stuck'
+                    ? 'פתיחת חסם'
+                    : 'ליצירת קשר',
+              updatedAt: new Date().toISOString(),
+            }
+          : artist,
+      ),
     )
-
-    setArtists(nextArtists)
 
     try {
       const updatedArtists = await bulkPatchArtists({
         ids: [...selectedIds],
         owner: bulkOwner,
-        priority: statusMeta[bulkStatus].action,
+        priority:
+          bulkStatus === 'signed'
+            ? 'שימור קשר'
+            : bulkStatus === 'stuck'
+              ? 'פתיחת חסם'
+              : 'ליצירת קשר',
         status: bulkStatus,
       })
       replaceArtists(updatedArtists)
       setSelectedIds(new Set())
-      setSaveState('הטיפול המרוכז נשמר ב-Neon')
+      setSaveStatus('idle')
+      setServerError('')
     } catch (error) {
       setServerError(error instanceof Error ? error.message : 'טיפול מרוכז נכשל')
-      setSaveState('שגיאת שמירה')
+      setSaveStatus('error')
     }
   }
 
-  const refreshFromServer = () => {
-    void loadArtists()
-    setSelectedIds(new Set())
-  }
-
   const exportCsv = () => {
-    const headers = ['שם', 'שם באנגלית', 'סטטוס', 'גורם מטפל', 'זאנרים', 'תגיות', 'אלבום אחרון', 'הערות']
+    const headers = ['שם', 'שם באנגלית', 'סטטוס', 'גורם מטפל', 'זאנרים', 'תגיות', 'אלבום', 'הערות']
     const rows = filteredArtists.map((artist) => [
       artist.nameHe,
       artist.nameEn,
@@ -336,272 +295,318 @@ function App() {
     URL.revokeObjectURL(url)
   }
 
+  const pageAllSelected =
+    visibleArtists.length > 0 && visibleArtists.every((a) => selectedIds.has(a.id))
+
   return (
-    <main className="app-shell" dir="rtl">
-      <section className="hero-panel" aria-labelledby="app-title">
-        <div className="brand-row">
-          <img src="/artist-logo.png" className="brand-logo" alt="ARTIST" />
-          <div>
-            <p className="eyebrow">מערכת CRM לאומנים</p>
-            <h1 id="app-title">ARTIST</h1>
-          </div>
+    <div className="app" dir="rtl">
+      <header className="app-header">
+        <div className="brand">
+          <img src="/artist-logo.png" className="brand-logo" alt="ARTIST" width={32} height={32} />
+          <span className="brand-title">ARTIST</span>
         </div>
-        <div className="hero-copy">
-          <p>
-            מרכז עבודה אחד לניהול אומנים חתומים, לא חתומים ותקועים, עם חיפוש מהיר,
-            סינון מתקדם וטיפול מרוכז.
-          </p>
-          <div className="sync-line">
-            <span className={`sync-pill ${serverError ? 'error' : 'ok'}`}>
-              {isLoading ? 'טוען מ-Neon...' : saveState}
-            </span>
-            {serverError && <span className="sync-error">יש בעיית שרת, מוצג גיבוי מקומי</span>}
-          </div>
-          <div className="hero-actions">
-            <button className="primary-action" onClick={selectVisible} type="button">
-              בחר את התוצאות
-            </button>
-            <button className="ghost-action" onClick={exportCsv} type="button">
-              <Download size={18} />
-              ייצוא CSV
-            </button>
-          </div>
+
+        <div className="header-stats" aria-label="סיכום">
+          <span className="stat-pill">
+            סה״כ <strong>{stats.total.toLocaleString('he-IL')}</strong>
+          </span>
+          <span className="stat-pill signed">
+            חתומים <strong>{stats.signed.toLocaleString('he-IL')}</strong>
+          </span>
+          <span className="stat-pill unsigned">
+            לא חתומים <strong>{stats.unsigned.toLocaleString('he-IL')}</strong>
+          </span>
+          <span className="stat-pill stuck">
+            תקועים <strong>{stats.stuck.toLocaleString('he-IL')}</strong>
+          </span>
+          <span className="stat-pill">
+            ללא מטפל <strong>{stats.unassigned.toLocaleString('he-IL')}</strong>
+          </span>
         </div>
-      </section>
 
-      <section className="stats-grid" aria-label="מדדי CRM">
-        <article className="stat-card">
-          <UsersRound size={22} />
-          <span>סה״כ אומנים</span>
-          <strong>{stats.total.toLocaleString('he-IL')}</strong>
-        </article>
-        <article className="stat-card green">
-          <CheckCircle2 size={22} />
-          <span>חתומים</span>
-          <strong>{stats.signed.toLocaleString('he-IL')}</strong>
-        </article>
-        <article className="stat-card red">
-          <ClipboardList size={22} />
-          <span>לא חתומים</span>
-          <strong>{stats.unsigned.toLocaleString('he-IL')}</strong>
-        </article>
-        <article className="stat-card yellow">
-          <Sparkles size={22} />
-          <span>תקועים</span>
-          <strong>{stats.stuck.toLocaleString('he-IL')}</strong>
-        </article>
-      </section>
-
-      <section className="smart-panel">
-        <div>
-          <p className="eyebrow">תובנות חכמות</p>
-          <h2>{stats.signedRate}% חתומים מתוך המאגר</h2>
-          <p>
-            {stats.unassigned.toLocaleString('he-IL')} אומנים עדיין ללא גורם מטפל.
-            {stats.touched > 0 && ` ${stats.touched.toLocaleString('he-IL')} כרטיסים עודכנו ידנית.`}
-          </p>
-        </div>
-        <div className="lead-chips" aria-label="המלצות לטיפול">
-          {smartLeads.map((lead) => (
-            <span key={lead}>לטפל עכשיו: {lead}</span>
-          ))}
-        </div>
-      </section>
-
-      <section className="workspace">
-        <aside className="filters-panel" aria-label="סינון מתקדם">
-          <div className="panel-title">
-            <Filter size={20} />
-            <h2>סינון מתקדם</h2>
-          </div>
-
-          <label className="search-box">
-            <Search size={18} />
-            <input
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="חיפוש שם, תגית, ז׳אנר, אלבום או מטפל"
-            />
-          </label>
-
-          <label>
-            סטטוס
-            <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as StatusFilter)}>
-              <option value="all">כל הסטטוסים</option>
-              <option value="signed">חתום</option>
-              <option value="unsigned">לא חתום</option>
-              <option value="stuck">תקוע</option>
-            </select>
-          </label>
-
-          <label>
-            גורם מטפל
-            <select value={ownerFilter} onChange={(event) => setOwnerFilter(event.target.value)}>
-              <option value="all">כל המטפלים</option>
-              {filterOptions.owners.map((owner) => (
-                <option key={owner} value={owner}>
-                  {owner}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label>
-            תגית מובילה
-            <select value={tagFilter} onChange={(event) => setTagFilter(event.target.value)}>
-              <option value="all">כל התגיות</option>
-              {filterOptions.tags.map(([tag, count]) => (
-                <option key={tag} value={tag}>
-                  {tag} ({count})
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label>
-            ז׳אנר
-            <select value={genreFilter} onChange={(event) => setGenreFilter(event.target.value)}>
-              <option value="all">כל הז׳אנרים</option>
-              {filterOptions.genres.map((genre) => (
-                <option key={genre} value={genre}>
-                  {genre}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label>
-            מיון
-            <select value={sortBy} onChange={(event) => setSortBy(event.target.value as SortOption)}>
-              <option value="smart">חכם: דחיפות + פוטנציאל</option>
-              <option value="name">שם א-ת</option>
-              <option value="status">לפי סטטוס</option>
-              <option value="tags">לפי כמות תגיות</option>
-            </select>
-          </label>
-
-          <label className="toggle-line">
-            <input
-              type="checkbox"
-              checked={needsActionOnly}
-              onChange={(event) => setNeedsActionOnly(event.target.checked)}
-            />
-            הצג רק כרטיסים שדורשים פעולה
-          </label>
-
-          <button className="ghost-action wide" onClick={refreshFromServer} type="button">
-            רענון מ-Neon
+        <div className="header-actions">
+          <span
+            className={`status-dot ${saveStatus}`}
+            title={
+              saveStatus === 'loading'
+                ? 'טוען'
+                : saveStatus === 'saving'
+                  ? 'שומר'
+                  : saveStatus === 'error'
+                    ? 'שגיאה'
+                    : 'מחובר'
+            }
+          />
+          <button
+            className="btn btn-ghost btn-icon"
+            type="button"
+            onClick={() => void loadArtists()}
+            title="רענון"
+          >
+            <RefreshCw size={15} />
           </button>
-        </aside>
+          <button className="btn btn-ghost" type="button" onClick={exportCsv}>
+            <Download size={14} />
+            ייצוא
+          </button>
+        </div>
+      </header>
 
-        <section className="crm-board" aria-label="כרטיסיות אומנים">
-          <div className="board-toolbar">
-            <div>
-              <p className="eyebrow">תוצאות</p>
-              <h2>
-                {filteredArtists.length.toLocaleString('he-IL')} אומנים נמצאו
-                {filteredArtists.length > DISPLAY_LIMIT && `, מוצגים ${DISPLAY_LIMIT}`}
-              </h2>
-            </div>
+      {serverError && <div className="app-alert">{serverError}</div>}
 
-            <div className="bulk-box">
-              <span>{selectedCount.toLocaleString('he-IL')} נבחרו</span>
-              <select value={bulkStatus} onChange={(event) => setBulkStatus(event.target.value as SignatureStatus)}>
+      <div className="toolbar">
+        <label className="search-field">
+          <Search size={14} />
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="חיפוש שם, תגית, ז׳אנר..."
+          />
+        </label>
+
+        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}>
+          <option value="all">כל הסטטוסים</option>
+          <option value="signed">חתום</option>
+          <option value="unsigned">לא חתום</option>
+          <option value="stuck">תקוע</option>
+        </select>
+
+        <select value={ownerFilter} onChange={(e) => setOwnerFilter(e.target.value)}>
+          <option value="all">כל המטפלים</option>
+          {filterOptions.owners.map((owner) => (
+            <option key={owner} value={owner}>
+              {owner}
+            </option>
+          ))}
+        </select>
+
+        <select value={tagFilter} onChange={(e) => setTagFilter(e.target.value)}>
+          <option value="all">כל התגיות</option>
+          {filterOptions.tags.map(([tag, count]) => (
+            <option key={tag} value={tag}>
+              {tag} ({count})
+            </option>
+          ))}
+        </select>
+
+        <select value={genreFilter} onChange={(e) => setGenreFilter(e.target.value)}>
+          <option value="all">כל הז׳אנרים</option>
+          {filterOptions.genres.map((genre) => (
+            <option key={genre} value={genre}>
+              {genre}
+            </option>
+          ))}
+        </select>
+
+        <select value={sortBy} onChange={(e) => setSortBy(e.target.value as SortOption)}>
+          <option value="smart">מיון חכם</option>
+          <option value="name">שם</option>
+          <option value="status">סטטוס</option>
+          <option value="tags">תגיות</option>
+        </select>
+
+        <label className="toolbar-check">
+          <input
+            type="checkbox"
+            checked={needsActionOnly}
+            onChange={(e) => setNeedsActionOnly(e.target.checked)}
+          />
+          דורש פעולה
+        </label>
+
+        {selectedCount > 0 && (
+          <>
+            <span className="toolbar-divider" />
+            <div className="bulk-bar">
+              <span>{selectedCount} נבחרו</span>
+              <select value={bulkStatus} onChange={(e) => setBulkStatus(e.target.value as SignatureStatus)}>
                 <option value="signed">חתום</option>
                 <option value="unsigned">לא חתום</option>
                 <option value="stuck">תקוע</option>
               </select>
-              <select value={bulkOwner} onChange={(event) => setBulkOwner(event.target.value)}>
-                {handlers.map((handler) => (
-                  <option key={handler} value={handler}>
-                    {handler}
+              <select value={bulkOwner} onChange={(e) => setBulkOwner(e.target.value)}>
+                {handlers.map((h) => (
+                  <option key={h} value={h}>
+                    {h}
                   </option>
                 ))}
               </select>
-              <button className="primary-action" onClick={applyBulkTreatment} type="button">
-                טיפול מרוכז
+              <button className="btn btn-primary" type="button" onClick={() => void applyBulkTreatment()}>
+                החל
               </button>
             </div>
-          </div>
+          </>
+        )}
+      </div>
 
-          <div className="cards-grid">
-            {visibleArtists.map((artist) => {
-              const meta = statusMeta[artist.status]
-
-              return (
-                <article className={`artist-card ${meta.tone}`} key={artist.id}>
-                  <div className="card-topline">
-                    <label className="select-card" aria-label={`בחר ${artist.nameHe}`}>
-                      <input
-                        type="checkbox"
-                        checked={selectedIds.has(artist.id)}
-                        onChange={() => toggleSelected(artist.id)}
-                      />
-                    </label>
-                    <span className={`status-light ${meta.tone}`} title={meta.description} />
-                    <span>{meta.label}</span>
-                  </div>
-
-                  <h3>{artist.nameHe || artist.nameEn}</h3>
-                  {artist.nameEn && <p className="english-name">{artist.nameEn}</p>}
-
-                  <div className="mini-meta">
-                    <span>{artist.latestAlbum || 'אין אלבום אחרון'}</span>
-                    <span>{artist.tags.length.toLocaleString('he-IL')} תגיות</span>
-                  </div>
-
-                  <div className="chips">
-                    {[...artist.genres, ...artist.tags].slice(0, 4).map((chip) => (
-                      <span key={chip}>{chip}</span>
-                    ))}
-                  </div>
-
-                  <div className="card-controls">
-                    <label>
-                      גורם מטפל
-                      <select
-                        value={artist.owner}
-                        onChange={(event) => updateArtist(artist.id, { owner: event.target.value })}
-                      >
-                        {handlers.map((handler) => (
-                          <option key={handler} value={handler}>
-                            {handler}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-
-                    <label>
-                      סטטוס
-                      <select
-                        value={artist.status}
-                        onChange={(event) =>
-                          updateArtist(artist.id, {
-                            status: event.target.value as SignatureStatus,
-                            priority: statusMeta[event.target.value as SignatureStatus].action,
-                          })
-                        }
-                      >
-                        <option value="signed">חתום</option>
-                        <option value="unsigned">לא חתום</option>
-                        <option value="stuck">תקוע</option>
-                      </select>
-                    </label>
-                  </div>
-
-                  <textarea
-                    value={artist.notes}
-                    onChange={(event) => updateArtist(artist.id, { notes: event.target.value })}
-                    placeholder="הערת טיפול קצרה"
-                    rows={2}
+      <div className="app-body">
+        <div className="table-wrap">
+          <table className="crm-table">
+            <thead>
+              <tr>
+                <th className="col-check">
+                  <input
+                    type="checkbox"
+                    checked={pageAllSelected}
+                    onChange={togglePageSelection}
+                    aria-label="בחר עמוד"
                   />
-                </article>
-              )
-            })}
-          </div>
-        </section>
-      </section>
-    </main>
+                </th>
+                <th className="col-status">סטטוס</th>
+                <th className="col-name">שם</th>
+                <th className="col-en">אנגלית</th>
+                <th className="col-tags">ז׳אנר / תגיות</th>
+                <th className="col-album">אלבום</th>
+                <th className="col-owner">מטפל</th>
+                <th className="col-status-select">עדכון</th>
+                <th className="col-notes">הערות</th>
+              </tr>
+            </thead>
+            <tbody>
+              {visibleArtists.length === 0 ? (
+                <tr>
+                  <td colSpan={9}>
+                    <div className="empty-state">
+                      {saveStatus === 'loading' ? 'טוען נתונים...' : 'לא נמצאו אומנים לפי הסינון'}
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                visibleArtists.map((artist) => {
+                  const meta = statusMeta[artist.status]
+                  const tagText = [...artist.genres, ...artist.tags].slice(0, 4).join(' · ')
+
+                  return (
+                    <tr key={artist.id} className={selectedIds.has(artist.id) ? 'selected' : undefined}>
+                      <td className="col-check">
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.has(artist.id)}
+                          onChange={() => toggleSelected(artist.id)}
+                          aria-label={`בחר ${artist.nameHe}`}
+                        />
+                      </td>
+                      <td className="col-status">
+                        <span className={`badge ${meta.tone}`}>{meta.label}</span>
+                      </td>
+                      <td className="col-name">
+                        <span className="name-cell" title={artist.nameHe}>
+                          {artist.nameHe || artist.nameEn}
+                        </span>
+                      </td>
+                      <td className="col-en">
+                        <span className="tag-line" title={artist.nameEn}>
+                          {artist.nameEn}
+                        </span>
+                      </td>
+                      <td className="col-tags">
+                        <span className="tag-line" title={tagText}>
+                          {tagText || '—'}
+                        </span>
+                      </td>
+                      <td className="col-album">
+                        <span className="tag-line" title={artist.latestAlbum}>
+                          {artist.latestAlbum || '—'}
+                        </span>
+                      </td>
+                      <td className="col-owner">
+                        <select
+                          className="cell-select"
+                          value={artist.owner}
+                          onChange={(e) => void updateArtist(artist.id, { owner: e.target.value })}
+                        >
+                          {handlers.map((h) => (
+                            <option key={h} value={h}>
+                              {h}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                      <td className="col-status-select">
+                        <select
+                          className="cell-select"
+                          value={artist.status}
+                          onChange={(e) => {
+                            const status = e.target.value as SignatureStatus
+                            void updateArtist(artist.id, {
+                              status,
+                              priority:
+                                status === 'signed'
+                                  ? 'שימור קשר'
+                                  : status === 'stuck'
+                                    ? 'פתיחת חסם'
+                                    : 'ליצירת קשר',
+                            })
+                          }}
+                        >
+                          <option value="signed">חתום</option>
+                          <option value="unsigned">לא חתום</option>
+                          <option value="stuck">תקוע</option>
+                        </select>
+                      </td>
+                      <td className="col-notes">
+                        <input
+                          className="cell-notes"
+                          value={artist.notes}
+                          onChange={(e) =>
+                            setArtists((current) =>
+                              current.map((a) =>
+                                a.id === artist.id ? { ...a, notes: e.target.value } : a,
+                              ),
+                            )
+                          }
+                          onBlur={(e) => void updateArtist(artist.id, { notes: e.target.value })}
+                          placeholder="הערה"
+                        />
+                      </td>
+                    </tr>
+                  )
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <footer className="table-footer">
+        <span>
+          {filteredArtists.length.toLocaleString('he-IL')} תוצאות
+          {filteredArtists.length > 0 && ` · עמוד ${safePage} מתוך ${totalPages}`}
+        </span>
+
+        <div className="pagination">
+          <select
+            value={pageSize}
+            onChange={(e) => setPageSize(Number(e.target.value) as (typeof PAGE_SIZES)[number])}
+            aria-label="שורות בעמוד"
+          >
+            {PAGE_SIZES.map((size) => (
+              <option key={size} value={size}>
+                {size} בשורה
+              </option>
+            ))}
+          </select>
+          <button
+            className="btn btn-icon"
+            type="button"
+            disabled={safePage <= 1}
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            aria-label="עמוד קודם"
+          >
+            <ChevronRight size={16} />
+          </button>
+          <button
+            className="btn btn-icon"
+            type="button"
+            disabled={safePage >= totalPages}
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            aria-label="עמוד הבא"
+          >
+            <ChevronLeft size={16} />
+          </button>
+        </div>
+      </footer>
+    </div>
   )
 }
 

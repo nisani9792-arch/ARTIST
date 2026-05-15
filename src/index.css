@@ -1,30 +1,38 @@
 :root {
-  --text: #52616b;
-  --text-strong: #0d1820;
-  --muted: #7c8a94;
-  --bg: #f5fbfb;
+  --text: #5c6b75;
+  --text-strong: #0f1720;
+  --muted: #8a97a1;
+  --bg: #f4f7f9;
   --surface: #ffffff;
-  --border: rgba(14, 35, 43, 0.1);
+  --surface-2: #f8fafb;
+  --border: #e2e8ee;
+  --border-strong: #cbd5e1;
   --accent: #2bdae5;
-  --green: #13bc7e;
-  --red: #f05f5f;
-  --yellow: #eab308;
-  --chip: rgba(43, 218, 229, 0.11);
-  --shadow: 0 22px 70px rgba(15, 23, 42, 0.08);
+  --accent-soft: rgba(43, 218, 229, 0.12);
+  --green: #0d9f6e;
+  --green-soft: rgba(13, 159, 110, 0.1);
+  --red: #dc4c4c;
+  --red-soft: rgba(220, 76, 76, 0.1);
+  --yellow: #c98a08;
+  --yellow-soft: rgba(201, 138, 8, 0.12);
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.05);
+  --shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+  --radius: 8px;
+  --radius-lg: 12px;
+  --header-h: 52px;
+  --toolbar-h: 44px;
+  --row-h: 40px;
 
-  font: 16px/1.5 Assistant, Rubik, 'Segoe UI', system-ui, sans-serif;
+  font: 13px/1.45 'Segoe UI', Assistant, Rubik, system-ui, sans-serif;
   color: var(--text);
-  background:
-    radial-gradient(circle at top left, rgba(43, 218, 229, 0.24), transparent 34rem),
-    linear-gradient(180deg, #f7ffff 0%, var(--bg) 48%, #eef7f7 100%);
+  background: var(--bg);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
 }
 
 * {
-  scrollbar-color: rgba(43, 218, 229, 0.7) rgba(13, 24, 32, 0.08);
+  box-sizing: border-box;
 }
 
 body {
@@ -37,15 +45,15 @@ button,
 input,
 select,
 textarea {
-  font-family: inherit;
+  font: inherit;
 }
 
 button:focus-visible,
 input:focus-visible,
 select:focus-visible,
 textarea:focus-visible {
-  outline: 3px solid rgba(43, 218, 229, 0.32);
-  outline-offset: 2px;
+  outline: 2px solid rgba(43, 218, 229, 0.45);
+  outline-offset: 1px;
 }
 
 #root {
@@ -56,28 +64,5 @@ h1,
 h2,
 h3,
 p {
-  margin-block-start: 0;
-}
-
-h1,
-h2,
-h3 {
-  color: var(--text-strong);
-}
-
-h1 {
   margin: 0;
-  font-size: clamp(2.8rem, 8vw, 5.6rem);
-  font-weight: 950;
-  letter-spacing: 0.02em;
-  line-height: 0.92;
-}
-
-h2 {
-  margin: 0;
-  font-size: clamp(1.18rem, 2vw, 1.5rem);
-}
-
-p {
-  margin-block-end: 0;
 }
