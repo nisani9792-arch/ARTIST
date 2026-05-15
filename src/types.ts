@@ -1,4 +1,4 @@
-import type { ArtistRecord, SignatureStatus } from './data/artists'
+import type { ArtistRecord, SignatureStatus } from './data/types'
 
 export type CrmArtist = ArtistRecord & {
   updatedAt?: string

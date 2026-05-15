@@ -1,6 +1,6 @@
 import { Pencil, Trash2, X } from 'lucide-react'
 import { useEffect } from 'react'
-import type { SignatureStatus } from '../data/artists'
+import type { SignatureStatus } from '../data/types'
 import type { CrmArtist } from '../types'
 
 type StatusMeta = Record<SignatureStatus, { label: string; tone: string }>

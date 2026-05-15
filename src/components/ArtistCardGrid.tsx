@@ -1,4 +1,5 @@
-import type { SignatureStatus } from '../data/artists'
+import { memo } from 'react'
+import type { SignatureStatus } from '../data/types'
 import type { CrmArtist } from '../types'
 
 type StatusMeta = Record<SignatureStatus, { label: string; tone: string }>
@@ -14,7 +15,7 @@ type ArtistCardGridProps = {
   onOpen: (artist: CrmArtist) => void
 }
 
-export const ArtistCardGrid = ({
+export const ArtistCardGrid = memo(function ArtistCardGrid({
   artists,
   handlers,
   statusMeta,
@@ -23,7 +24,7 @@ export const ArtistCardGrid = ({
   onToggleSelect,
   onUpdate,
   onOpen,
-}: ArtistCardGridProps) => {
+}: ArtistCardGridProps) {
   if (artists.length === 0) {
     return (
       <div className="empty-state">
@@ -94,4 +95,4 @@ export const ArtistCardGrid = ({
       })}
     </div>
   )
-}
+})

@@ -49,6 +49,20 @@
   letter-spacing: 0.02em;
 }
 
+.operator-badge {
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent-strong);
+  background: var(--accent-soft);
+  border: 1px solid rgba(43, 218, 229, 0.28);
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .header-stats {
   display: flex;
   align-items: center;
@@ -218,6 +232,11 @@
 .search-field input:focus {
   background: var(--surface);
   border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.search-field input::placeholder {
+  color: var(--muted);
 }
 
 .toolbar select {

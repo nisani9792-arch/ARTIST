@@ -10,26 +10,32 @@ import {
   Table2,
   Trash2,
 } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import './App.css'
+import './components/LockScreen.css'
 import { ArtistCardGrid } from './components/ArtistCardGrid'
 import { ArtistDetailPanel } from './components/ArtistDetailPanel'
 import { ArtistFormModal } from './components/ArtistFormModal'
 import { InstallPrompt } from './components/InstallPrompt'
 import { LockScreen } from './components/LockScreen'
 import { MobileBottomBar } from './components/MobileBottomBar'
-import { initialArtists, type SignatureStatus } from './data/artists'
+import { OperatorRegistration } from './components/OperatorRegistration'
+import type { SignatureStatus } from './data/types'
 import {
   bulkDeleteArtists,
   bulkPatchArtists,
   createArtist,
   deleteArtist,
   downloadBackup,
-  fetchArtists,
+  fetchBootstrap,
   patchArtist,
+  setApiOperator,
 } from './api/artists'
+import { useDebouncedValue } from './hooks/useDebouncedValue'
 import { useOnlineStatus } from './hooks/useOnlineStatus'
+import { useOperator } from './hooks/useOperator'
 import { useUnlockGate } from './hooks/useUnlockGate'
+import { buildArtistSearchRows, computeHeaderStats, filterArtistRows } from './utils/filterArtists'
 import type { CrmArtist, OwnerFilter, SaveStatus, SortOption, StatusFilter, ViewMode } from './types'
 
 const BACKUP_REMINDER_DAYS = 7
@@ -52,23 +58,25 @@ const priorityForStatus = (status: SignatureStatus) => {
   return 'ליצירת קשר'
 }
 
-const normalize = (value: string) => value.toLocaleLowerCase('he-IL').trim()
-
-const readInitialArtists = (): CrmArtist[] =>
-  initialArtists.map((artist) => ({ ...artist }))
-
 const formatCsvValue = (value: string | string[]) => {
   const text = Array.isArray(value) ? value.join(', ') : value
   return `"${text.replace(/"/g, '""')}"`
 }
 
 function App() {
-  const { unlocked, unlock } = useUnlockGate()
+  const { unlocked, displayName: gateDisplayName, loading: gateLoading, unlock } = useUnlockGate()
+  const {
+    displayName: operatorName,
+    loading: operatorLoading,
+    error: operatorError,
+    register: registerOperator,
+  } = useOperator(unlocked, gateDisplayName)
   const online = useOnlineStatus()
 
-  const [artists, setArtists] = useState<CrmArtist[]>(readInitialArtists)
+  const [artists, setArtists] = useState<CrmArtist[]>([])
   const [viewMode, setViewMode] = useState<ViewMode>('cards')
   const [query, setQuery] = useState('')
+  const debouncedQuery = useDebouncedValue(query, 280)
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [ownerFilter, setOwnerFilter] = useState<OwnerFilter>('all')
   const [tagFilter, setTagFilter] = useState('all')
@@ -78,6 +86,25 @@ function App() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [bulkStatus, setBulkStatus] = useState<SignatureStatus>('unsigned')
   const [bulkOwner, setBulkOwner] = useState('שימון')
+
+  const handlerList = useMemo(() => {
+    const set = new Set(handlers)
+    if (operatorName) set.add(operatorName)
+    return [...set]
+  }, [operatorName])
+
+  const withOperatorPatch = (patch: Partial<CrmArtist>): Partial<CrmArtist> => {
+    if (!operatorName || patch.owner !== undefined) return patch
+    return { ...patch, owner: operatorName }
+  }
+
+  useEffect(() => {
+    setApiOperator(operatorName)
+  }, [operatorName])
+
+  useEffect(() => {
+    if (operatorName) setBulkOwner(operatorName)
+  }, [operatorName])
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('loading')
   const [serverError, setServerError] = useState('')
   const [page, setPage] = useState(1)
@@ -106,29 +133,30 @@ function App() {
   const pageSize = viewMode === 'cards' ? cardPageSize : tablePageSize
   const pageSizes = viewMode === 'cards' ? CARD_PAGE_SIZES : TABLE_PAGE_SIZES
 
-  const loadArtists = async () => {
+  const loadWorkspace = useCallback(async () => {
     setSaveStatus('loading')
     setServerError('')
 
     try {
-      const serverArtists = await fetchArtists()
-      setArtists(serverArtists)
+      const payload = await fetchBootstrap()
+      setArtists(payload.artists)
       setSaveStatus('idle')
     } catch (error) {
       setServerError(error instanceof Error ? error.message : 'לא ניתן להתחבר לשרת')
       setSaveStatus('error')
     }
-  }
+  }, [])
 
   useEffect(() => {
-    if (!unlocked) return
+    if (!unlocked || !operatorName) return
 
     let isActive = true
+    setSaveStatus('loading')
 
-    fetchArtists()
-      .then((serverArtists) => {
+    fetchBootstrap()
+      .then((payload) => {
         if (!isActive) return
-        setArtists(serverArtists)
+        setArtists(payload.artists)
         setSaveStatus('idle')
       })
       .catch((error) => {
@@ -140,7 +168,7 @@ function App() {
     return () => {
       isActive = false
     }
-  }, [unlocked])
+  }, [unlocked, operatorName])
 
   const replaceArtists = (updatedArtists: CrmArtist[]) => {
     const updatedById = new Map(updatedArtists.map((artist) => [artist.id, artist]))
@@ -148,17 +176,18 @@ function App() {
   }
 
   const updateArtist = async (artistId: string, patch: Partial<CrmArtist>) => {
+    const effectivePatch = withOperatorPatch(patch)
     setSaveStatus('saving')
     setArtists((current) =>
       current.map((artist) =>
         artist.id === artistId
-          ? { ...artist, ...patch, updatedAt: new Date().toISOString() }
+          ? { ...artist, ...effectivePatch, updatedAt: new Date().toISOString() }
           : artist,
       ),
     )
 
     try {
-      const updatedArtist = await patchArtist(artistId, patch)
+      const updatedArtist = await patchArtist(artistId, effectivePatch)
       replaceArtists([updatedArtist])
       setSaveStatus('idle')
       setServerError('')
@@ -168,19 +197,13 @@ function App() {
     }
   }
 
-  const stats = useMemo(() => {
-    const signed = artists.filter((a) => a.status === 'signed').length
-    const unsigned = artists.filter((a) => a.status === 'unsigned').length
-    const stuck = artists.filter((a) => a.status === 'stuck').length
-    const unassigned = artists.filter((a) => a.owner === 'לא שויך').length
-
-    return { signed, unsigned, stuck, unassigned, total: artists.length }
-  }, [artists])
+  const headerStats = useMemo(() => computeHeaderStats(artists), [artists])
+  const searchRows = useMemo(() => buildArtistSearchRows(artists), [artists])
 
   const filterOptions = useMemo(() => {
     const tags = new Map<string, number>()
     const genres = new Set<string>()
-    const owners = new Set(handlers)
+    const owners = new Set(handlerList)
 
     for (const artist of artists) {
       artist.tags.forEach((tag) => tags.set(tag, (tags.get(tag) ?? 0) + 1))
@@ -193,66 +216,44 @@ function App() {
       genres: [...genres].sort((a, b) => a.localeCompare(b, 'he')),
       owners: [...owners],
     }
-  }, [artists])
+  }, [artists, handlerList])
 
-  const filteredArtists = useMemo(() => {
-    const normalizedQuery = normalize(query)
-
-    const ranked = artists
-      .filter((artist) => {
-        const haystack = normalize(
-          [
-            artist.nameHe,
-            artist.nameEn,
-            artist.latestAlbum,
-            artist.owner,
-            artist.source,
-            artist.priority,
-            artist.notes,
-            ...artist.genres,
-            ...artist.tags,
-          ].join(' '),
-        )
-
-        const matchesSearch = !normalizedQuery || haystack.includes(normalizedQuery)
-        const matchesStatus = statusFilter === 'all' || artist.status === statusFilter
-        const matchesOwner = ownerFilter === 'all' || artist.owner === ownerFilter
-        const matchesTag = tagFilter === 'all' || artist.tags.includes(tagFilter)
-        const matchesGenre = genreFilter === 'all' || artist.genres.includes(genreFilter)
-        const matchesAction =
-          !needsActionOnly || artist.status !== 'signed' || artist.owner === 'לא שויך'
-
-        return (
-          matchesSearch &&
-          matchesStatus &&
-          matchesOwner &&
-          matchesTag &&
-          matchesGenre &&
-          matchesAction
-        )
-      })
-      .map((artist) => ({
-        artist,
-        score:
-          (artist.status === 'stuck' ? 70 : 0) +
-          (artist.status === 'unsigned' ? 45 : 0) +
-          (artist.owner === 'לא שויך' ? 25 : 0) +
-          Math.min(artist.tags.length, 10) * 2,
-      }))
-
-    ranked.sort((a, b) => {
-      if (sortBy === 'name') return a.artist.nameHe.localeCompare(b.artist.nameHe, 'he')
-      if (sortBy === 'status') return a.artist.status.localeCompare(b.artist.status)
-      if (sortBy === 'tags') return b.artist.tags.length - a.artist.tags.length
-      return b.score - a.score
-    })
-
-    return ranked.map(({ artist }) => artist)
-  }, [artists, genreFilter, needsActionOnly, ownerFilter, query, sortBy, statusFilter, tagFilter])
+  const filteredArtists = useMemo(
+    () =>
+      filterArtistRows(searchRows, {
+        query: debouncedQuery,
+        statusFilter,
+        ownerFilter,
+        tagFilter,
+        genreFilter,
+        needsActionOnly,
+        sortBy,
+      }),
+    [
+      searchRows,
+      debouncedQuery,
+      statusFilter,
+      ownerFilter,
+      tagFilter,
+      genreFilter,
+      needsActionOnly,
+      sortBy,
+    ],
+  )
 
   useEffect(() => {
     setPage(1)
-  }, [query, statusFilter, ownerFilter, tagFilter, genreFilter, needsActionOnly, sortBy, pageSize, viewMode])
+  }, [
+    debouncedQuery,
+    statusFilter,
+    ownerFilter,
+    tagFilter,
+    genreFilter,
+    needsActionOnly,
+    sortBy,
+    pageSize,
+    viewMode,
+  ])
 
   const totalPages = Math.max(1, Math.ceil(filteredArtists.length / pageSize))
   const safePage = Math.min(page, totalPages)
@@ -286,10 +287,12 @@ function App() {
   const handleCreateArtist = async (payload: Partial<CrmArtist>) => {
     setSaveStatus('saving')
     try {
-      const created = await createArtist({
-        ...payload,
-        priority: priorityForStatus(payload.status ?? 'unsigned'),
-      })
+      const created = await createArtist(
+        withOperatorPatch({
+          ...payload,
+          priority: priorityForStatus(payload.status ?? 'unsigned'),
+        }),
+      )
       setArtists((current) => [...current, created].sort((a, b) => a.nameHe.localeCompare(b.nameHe, 'he')))
       setSaveStatus('idle')
       setServerError('')
@@ -303,7 +306,7 @@ function App() {
   const handleEditArtist = async (payload: Partial<CrmArtist>) => {
     if (!editingArtist) return
     await updateArtist(editingArtist.id, {
-      ...payload,
+      ...withOperatorPatch(payload),
       priority: priorityForStatus(payload.status ?? editingArtist.status),
     })
   }
@@ -435,8 +438,33 @@ function App() {
   const pageAllSelected =
     visibleArtists.length > 0 && visibleArtists.every((a) => selectedIds.has(a.id))
 
+  if (gateLoading || (unlocked && operatorLoading)) {
+    return (
+      <div className="lock-screen" aria-busy="true" aria-label="טוען">
+        <div className="lock-card loading-card">
+          <img src="/artist-logo.png" className="lock-logo" alt="ARTIST" width={72} height={72} />
+          <div className="loading-dots" aria-hidden>
+            <span />
+            <span />
+            <span />
+          </div>
+          <p className="lock-prompt">טוען את המערכת...</p>
+        </div>
+      </div>
+    )
+  }
+
   if (!unlocked) {
-    return <LockScreen onUnlock={unlock} />
+    return <LockScreen onUnlock={() => void unlock()} />
+  }
+
+  if (!operatorName) {
+    return (
+      <OperatorRegistration
+        onRegister={registerOperator}
+        error={operatorError || undefined}
+      />
+    )
   }
 
   return (
@@ -472,20 +500,23 @@ function App() {
         <div className="brand">
           <img src="/artist-logo.png" className="brand-logo" alt="ARTIST" width={32} height={32} />
           <span className="brand-title">ARTIST</span>
+          <span className="operator-badge" title="גורם מטפל מחובר">
+            {operatorName}
+          </span>
         </div>
 
         <div className="header-stats mobile-stats-scroll" aria-label="סיכום">
           <span className="stat-pill">
-            סה״כ <strong>{stats.total.toLocaleString('he-IL')}</strong>
+            סה״כ <strong>{headerStats.total.toLocaleString('he-IL')}</strong>
           </span>
           <span className="stat-pill signed">
-            חתומים <strong>{stats.signed.toLocaleString('he-IL')}</strong>
+            חתומים <strong>{headerStats.signed.toLocaleString('he-IL')}</strong>
           </span>
           <span className="stat-pill unsigned">
-            לא חתומים <strong>{stats.unsigned.toLocaleString('he-IL')}</strong>
+            לא חתומים <strong>{headerStats.unsigned.toLocaleString('he-IL')}</strong>
           </span>
           <span className="stat-pill stuck">
-            תקועים <strong>{stats.stuck.toLocaleString('he-IL')}</strong>
+            תקועים <strong>{headerStats.stuck.toLocaleString('he-IL')}</strong>
           </span>
         </div>
 
@@ -523,7 +554,7 @@ function App() {
           <button
             className="btn btn-ghost btn-icon desktop-only"
             type="button"
-            onClick={() => void loadArtists()}
+            onClick={() => void loadWorkspace()}
             title="רענון"
           >
             <RefreshCw size={15} />
@@ -642,7 +673,7 @@ function App() {
                 <option value="stuck">תקוע</option>
               </select>
               <select value={bulkOwner} onChange={(e) => setBulkOwner(e.target.value)}>
-                {handlers.map((h) => (
+                {handlerList.map((h) => (
                   <option key={h} value={h}>
                     {h}
                   </option>
@@ -668,7 +699,7 @@ function App() {
           {viewMode === 'cards' ? (
             <ArtistCardGrid
               artists={visibleArtists}
-              handlers={handlers}
+              handlers={handlerList}
               statusMeta={statusMeta}
               selectedIds={selectedIds}
               isLoading={saveStatus === 'loading'}
@@ -747,7 +778,7 @@ function App() {
                               value={artist.owner}
                               onChange={(e) => void updateArtist(artist.id, { owner: e.target.value })}
                             >
-                              {handlers.map((h) => (
+                              {handlerList.map((h) => (
                                 <option key={h} value={h}>
                                   {h}
                                 </option>
@@ -857,7 +888,7 @@ function App() {
         <ArtistFormModal
           mode={formMode}
           artist={formMode === 'edit' ? editingArtist ?? undefined : undefined}
-          handlers={handlers}
+          handlers={handlerList}
           onClose={() => {
             setFormMode(null)
             setEditingArtist(null)

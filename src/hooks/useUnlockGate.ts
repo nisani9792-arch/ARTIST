@@ -1,21 +1,54 @@
 import { useCallback, useEffect, useState } from 'react'
+import { fetchAccessState, unlockGate } from '../api/access'
 
-const STORAGE_KEY = 'artist-crm-unlocked'
 const RESET_MS = 1600
 const REQUIRED_PRESSES = 3
 
 export const useUnlockGate = () => {
-  const [unlocked, setUnlocked] = useState(
-    () => typeof sessionStorage !== 'undefined' && sessionStorage.getItem(STORAGE_KEY) === '1',
-  )
+  const [gateUnlocked, setGateUnlocked] = useState(false)
+  const [displayName, setDisplayName] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [unlocking, setUnlocking] = useState(false)
 
-  const unlock = useCallback(() => {
-    sessionStorage.setItem(STORAGE_KEY, '1')
-    setUnlocked(true)
+  const applyAccess = useCallback((access: { gateUnlocked: boolean; displayName: string | null }) => {
+    setGateUnlocked(access.gateUnlocked)
+    setDisplayName(access.displayName)
   }, [])
 
+  const unlock = useCallback(async () => {
+    if (unlocking) return
+    setUnlocking(true)
+    try {
+      const access = await unlockGate()
+      applyAccess(access)
+    } finally {
+      setUnlocking(false)
+    }
+  }, [applyAccess, unlocking])
+
   useEffect(() => {
-    if (unlocked) return
+    let active = true
+
+    fetchAccessState()
+      .then((access) => {
+        if (!active) return
+        applyAccess(access)
+      })
+      .catch(() => {
+        if (!active) return
+        applyAccess({ gateUnlocked: false, displayName: null })
+      })
+      .finally(() => {
+        if (active) setLoading(false)
+      })
+
+    return () => {
+      active = false
+    }
+  }, [applyAccess])
+
+  useEffect(() => {
+    if (gateUnlocked || loading) return
 
     let resetTimer: ReturnType<typeof setTimeout> | undefined
     let pressCount = 0
@@ -26,7 +59,7 @@ export const useUnlockGate = () => {
 
       pressCount += 1
       if (pressCount >= REQUIRED_PRESSES) {
-        unlock()
+        void unlock()
         pressCount = 0
         return
       }
@@ -42,7 +75,7 @@ export const useUnlockGate = () => {
       window.removeEventListener('keydown', onKeyDown)
       clearTimeout(resetTimer)
     }
-  }, [unlocked, unlock])
+  }, [gateUnlocked, loading, unlock])
 
-  return { unlocked, unlock }
+  return { unlocked: gateUnlocked, displayName, loading, unlocking, unlock }
 }

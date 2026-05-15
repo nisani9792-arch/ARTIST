@@ -1,7 +1,16 @@
-import type { ArtistRecord, SignatureStatus } from '../data/artists'
+import type { AccessState } from './access'
+import type { ArtistRecord, SignatureStatus } from '../data/types'
 
 export type CrmArtist = ArtistRecord & {
   updatedAt?: string
+}
+
+export type HeaderStats = {
+  total: number
+  signed: number
+  unsigned: number
+  stuck: number
+  unassigned: number
 }
 
 type ArtistsResponse = {
@@ -16,26 +25,60 @@ type DeleteIdsResponse = {
   ids: string[]
 }
 
+type StatsResponse = {
+  stats: HeaderStats
+}
+
+type BootstrapResponse = {
+  access: AccessState
+  artists: CrmArtist[]
+  stats: HeaderStats
+}
+
+let currentOperator: string | null = null
+
+export const setApiOperator = (name: string | null) => {
+  currentOperator = name
+}
+
+const parseError = async (response: Response) => {
+  const text = await response.text()
+  try {
+    const json = JSON.parse(text) as { error?: string }
+    if (json.error) return json.error
+  } catch {
+    // ignore
+  }
+  return text || `Request failed with status ${response.status}`
+}
+
 const request = async <T>(url: string, options?: RequestInit): Promise<T> => {
   const response = await fetch(url, {
     headers: {
       'Content-Type': 'application/json',
+      ...(currentOperator ? { 'X-Operator': currentOperator } : {}),
       ...options?.headers,
     },
     ...options,
   })
 
   if (!response.ok) {
-    const text = await response.text()
-    throw new Error(text || `Request failed with status ${response.status}`)
+    throw new Error(await parseError(response))
   }
 
   return response.json() as Promise<T>
 }
 
+export const fetchBootstrap = async () => request<BootstrapResponse>('/api/bootstrap')
+
 export const fetchArtists = async () => {
   const response = await request<ArtistsResponse>('/api/artists')
   return response.artists
+}
+
+export const fetchStats = async () => {
+  const response = await request<StatsResponse>('/api/stats')
+  return response.stats
 }
 
 export const createArtist = async (payload: Partial<CrmArtist>) => {
@@ -90,13 +133,7 @@ export type BackupPayload = {
   version: number
   exportedAt: string
   service: string
-  stats: {
-    total: number
-    signed: number
-    unsigned: number
-    stuck: number
-    unassigned: number
-  }
+  stats: HeaderStats
   count: number
   artists: CrmArtist[]
 }

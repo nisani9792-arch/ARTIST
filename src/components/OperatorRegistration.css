@@ -1,0 +1,27 @@
+.operator-screen .operator-card {
+  gap: 12px;
+}
+
+.operator-hint {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: rgba(244, 251, 252, 0.72);
+  text-align: center;
+}
+
+.operator-input {
+  letter-spacing: normal;
+  text-align: right;
+}
+
+.operator-error {
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: #ff8f8f;
+  text-align: center;
+}
+
+.operator-submit {
+  margin-top: 8px;
+}

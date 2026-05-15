@@ -1,20 +1,44 @@
 import { Fingerprint, Lock } from 'lucide-react'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useBiometricUnlock } from '../hooks/useBiometricUnlock'
 import './LockScreen.css'
 
+const GATE_CODE = 'JUSIC'
+
 type LockScreenProps = {
-  onUnlock: () => void
+  onUnlock: () => void | Promise<void>
 }
 
 export const LockScreen = ({ onUnlock }: LockScreenProps) => {
   const [password, setPassword] = useState('')
+  const [busy, setBusy] = useState(false)
+  const unlockStarted = useRef(false)
   const { available: biometricAvailable, busy: biometricBusy, unlock: unlockWithBiometric } =
     useBiometricUnlock(onUnlock)
 
+  const tryUnlockWithCode = async (value: string) => {
+    if (unlockStarted.current) return
+    if (value.trim().toUpperCase() !== GATE_CODE) return
+
+    unlockStarted.current = true
+    setBusy(true)
+    try {
+      await onUnlock()
+    } finally {
+      setBusy(false)
+    }
+  }
+
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault()
-    // שדה הסיסמה לתצוגה בלבד — לא פותח את המערכת
+    void tryUnlockWithCode(password)
+  }
+
+  const handlePasswordChange = (value: string) => {
+    setPassword(value)
+    if (value.trim().toUpperCase() === GATE_CODE) {
+      void tryUnlockWithCode(value)
+    }
   }
 
   return (
@@ -36,9 +60,10 @@ export const LockScreen = ({ onUnlock }: LockScreenProps) => {
             autoComplete="off"
             maxLength={20}
             value={password}
-            onChange={(event) => setPassword(event.target.value)}
+            onChange={(event) => handlePasswordChange(event.target.value)}
             placeholder="••••••••••••••••••••"
             aria-label="סיסמא"
+            disabled={busy}
           />
         </form>
 
@@ -47,11 +72,11 @@ export const LockScreen = ({ onUnlock }: LockScreenProps) => {
             type="button"
             className="lock-biometric"
             onClick={() => void unlockWithBiometric()}
-            disabled={biometricBusy}
+            disabled={biometricBusy || busy}
           >
             <Fingerprint size={22} strokeWidth={2} />
             <span>
-              {biometricBusy
+              {biometricBusy || busy
                 ? 'מאמת...'
                 : 'כניסה ביומטרית (טביעת אצבע / Windows Hello)'}
             </span>

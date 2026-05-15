@@ -1,6 +1,6 @@
 import { X } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import type { SignatureStatus } from '../data/artists'
+import type { SignatureStatus } from '../data/types'
 import {
   artistToForm,
   emptyArtistForm,

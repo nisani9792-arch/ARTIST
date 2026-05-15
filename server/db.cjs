@@ -67,11 +67,108 @@ const setupDatabase = async () => {
   await sql`CREATE INDEX IF NOT EXISTS artists_status_idx ON artists (status)`
   await sql`CREATE INDEX IF NOT EXISTS artists_owner_idx ON artists (owner)`
   await sql`CREATE INDEX IF NOT EXISTS artists_updated_at_idx ON artists (updated_at DESC)`
+
+  await sql`
+    CREATE TABLE IF NOT EXISTS ip_access (
+      ip TEXT PRIMARY KEY,
+      display_name TEXT,
+      gate_unlocked_at TIMESTAMPTZ,
+      registered_at TIMESTAMPTZ,
+      last_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `
+}
+
+const normalizeAccess = (row) => ({
+  gateUnlocked: Boolean(row?.gate_unlocked_at),
+  displayName: row?.display_name ?? null,
+})
+
+const getAccessByIp = async (ip) => {
+  const [touched] = await sql`
+    UPDATE ip_access
+    SET last_seen_at = NOW()
+    WHERE ip = ${ip}
+    RETURNING ip, display_name, gate_unlocked_at
+  `
+
+  if (touched) {
+    return normalizeAccess(touched)
+  }
+
+  return { gateUnlocked: false, displayName: null }
+}
+
+const getOperatorNameByIp = async (ip) => {
+  const rows = await sql`
+    SELECT display_name
+    FROM ip_access
+    WHERE ip = ${ip} AND gate_unlocked_at IS NOT NULL
+    LIMIT 1
+  `
+
+  return rows[0]?.display_name ?? null
+}
+
+const unlockGateForIp = async (ip) => {
+  const [row] = await sql`
+    INSERT INTO ip_access (ip, gate_unlocked_at, last_seen_at)
+    VALUES (${ip}, NOW(), NOW())
+    ON CONFLICT (ip) DO UPDATE SET
+      gate_unlocked_at = COALESCE(ip_access.gate_unlocked_at, EXCLUDED.gate_unlocked_at),
+      last_seen_at = NOW()
+    RETURNING ip, display_name, gate_unlocked_at, registered_at, last_seen_at
+  `
+
+  return normalizeAccess(row)
+}
+
+const registerOperatorForIp = async (ip, displayName) => {
+  const name = String(displayName ?? '').trim()
+  if (name.length < 2 || name.length > 40) {
+    throw new Error('Invalid display name')
+  }
+
+  const [row] = await sql`
+    UPDATE ip_access
+    SET
+      display_name = ${name},
+      registered_at = COALESCE(registered_at, NOW()),
+      last_seen_at = NOW()
+    WHERE ip = ${ip} AND gate_unlocked_at IS NOT NULL
+    RETURNING ip, display_name, gate_unlocked_at, registered_at, last_seen_at
+  `
+
+  if (!row) {
+    throw new Error('Gate is locked')
+  }
+
+  return normalizeAccess(row)
+}
+
+const withOperatorOwner = (patch, operator) => {
+  if (!operator || patch.owner !== undefined) {
+    return patch
+  }
+
+  return { ...patch, owner: operator }
 }
 
 const getArtists = async () => {
   const rows = await sql`
-    SELECT *
+    SELECT
+      id,
+      name_he,
+      name_en,
+      genres,
+      tags,
+      latest_album,
+      status,
+      owner,
+      source,
+      notes,
+      priority,
+      updated_at
     FROM artists
     ORDER BY name_he COLLATE "C"
   `
@@ -102,24 +199,43 @@ const parseTagList = (value) => {
     .filter(Boolean)
 }
 
-const updateArtist = async (id, patch) => {
-  const currentRows = await sql`SELECT * FROM artists WHERE id = ${id} LIMIT 1`
+const updateArtist = async (id, patch, operator) => {
+  const effectivePatch = withOperatorOwner(patch, operator)
+  const currentRows = await sql`
+    SELECT
+      id,
+      name_he,
+      name_en,
+      genres,
+      tags,
+      latest_album,
+      status,
+      owner,
+      source,
+      notes,
+      priority,
+      updated_at
+    FROM artists
+    WHERE id = ${id}
+    LIMIT 1
+  `
 
   if (currentRows.length === 0) {
     return null
   }
 
   const current = currentRows[0]
-  const nextStatus = patch.status ?? current.status
+  const nextStatus = effectivePatch.status ?? current.status
 
   if (!allowedStatuses.has(nextStatus)) {
     throw new Error('Invalid status')
   }
 
-  const nameHe = patch.nameHe ?? current.name_he
-  const nameEn = patch.nameEn ?? current.name_en
-  const genres = patch.genres !== undefined ? parseTagList(patch.genres) : current.genres
-  const tags = patch.tags !== undefined ? parseTagList(patch.tags) : current.tags
+  const nameHe = effectivePatch.nameHe ?? current.name_he
+  const nameEn = effectivePatch.nameEn ?? current.name_en
+  const genres =
+    effectivePatch.genres !== undefined ? parseTagList(effectivePatch.genres) : current.genres
+  const tags = effectivePatch.tags !== undefined ? parseTagList(effectivePatch.tags) : current.tags
 
   const [updated] = await sql`
     UPDATE artists
@@ -128,12 +244,12 @@ const updateArtist = async (id, patch) => {
       name_en = ${nameEn},
       genres = ${genres},
       tags = ${tags},
-      latest_album = ${patch.latestAlbum ?? current.latest_album},
+      latest_album = ${effectivePatch.latestAlbum ?? current.latest_album},
       status = ${nextStatus},
-      owner = ${patch.owner ?? current.owner},
-      source = ${patch.source ?? current.source},
-      notes = ${patch.notes ?? current.notes},
-      priority = ${patch.priority ?? current.priority},
+      owner = ${effectivePatch.owner ?? current.owner},
+      source = ${effectivePatch.source ?? current.source},
+      notes = ${effectivePatch.notes ?? current.notes},
+      priority = ${effectivePatch.priority ?? current.priority},
       updated_at = NOW()
     WHERE id = ${id}
     RETURNING *
@@ -142,27 +258,28 @@ const updateArtist = async (id, patch) => {
   return normalizeArtist(updated)
 }
 
-const createArtist = async (payload) => {
-  const nameHe = String(payload.nameHe ?? '').trim()
+const createArtist = async (payload, operator) => {
+  const effectivePayload = withOperatorOwner(payload, operator)
+  const nameHe = String(effectivePayload.nameHe ?? '').trim()
   if (!nameHe) {
     throw new Error('Artist name is required')
   }
 
-  const status = payload.status ?? 'unsigned'
+  const status = effectivePayload.status ?? 'unsigned'
   if (!allowedStatuses.has(status)) {
     throw new Error('Invalid status')
   }
 
   const id =
-    String(payload.id ?? '').trim() ||
+    String(effectivePayload.id ?? '').trim() ||
     `${nameHe
       .toLowerCase()
       .replace(/[^\p{L}\p{N}]+/gu, '-')
       .replace(/^-+|-+$/g, '')
       .slice(0, 60)}-${Date.now()}`
 
-  const genres = parseTagList(payload.genres)
-  const tags = parseTagList(payload.tags)
+  const genres = parseTagList(effectivePayload.genres)
+  const tags = parseTagList(effectivePayload.tags)
 
   const [created] = await sql`
     INSERT INTO artists (
@@ -181,15 +298,15 @@ const createArtist = async (payload) => {
     VALUES (
       ${id},
       ${nameHe},
-      ${String(payload.nameEn ?? '').trim()},
+      ${String(effectivePayload.nameEn ?? '').trim()},
       ${genres},
       ${tags},
-      ${String(payload.latestAlbum ?? '').trim()},
+      ${String(effectivePayload.latestAlbum ?? '').trim()},
       ${status},
-      ${payload.owner ?? 'לא שויך'},
-      ${String(payload.source ?? '').trim()},
-      ${String(payload.notes ?? '').trim()},
-      ${payload.priority ?? (status === 'signed' ? 'שימור קשר' : status === 'stuck' ? 'פתיחת חסם' : 'ליצירת קשר')}
+      ${effectivePayload.owner ?? 'לא שויך'},
+      ${String(effectivePayload.source ?? '').trim()},
+      ${String(effectivePayload.notes ?? '').trim()},
+      ${effectivePayload.priority ?? (status === 'signed' ? 'שימור קשר' : status === 'stuck' ? 'פתיחת חסם' : 'ליצירת קשר')}
     )
     RETURNING *
   `
@@ -211,7 +328,8 @@ const bulkDeleteArtists = async (ids) => {
   return rows.map((row) => row.id)
 }
 
-const bulkUpdateArtists = async ({ ids, status, owner, priority }) => {
+const bulkUpdateArtists = async ({ ids, status, owner, priority }, operator) => {
+  const effectiveOwner = owner ?? operator
   if (!Array.isArray(ids) || ids.length === 0) {
     return []
   }
@@ -224,7 +342,7 @@ const bulkUpdateArtists = async ({ ids, status, owner, priority }) => {
     UPDATE artists
     SET
       status = ${status},
-      owner = ${owner},
+      owner = ${effectiveOwner},
       priority = ${priority},
       updated_at = NOW()
     WHERE id = ANY(${ids})
@@ -311,10 +429,14 @@ module.exports = {
   bulkUpdateArtists,
   createArtist,
   deleteArtist,
+  getAccessByIp,
+  getOperatorNameByIp,
   getArtists,
   getBackupPayload,
   getStats,
+  registerOperatorForIp,
   setupDatabase,
+  unlockGateForIp,
   updateArtist,
   upsertArtists,
 }

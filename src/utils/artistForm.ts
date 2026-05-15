@@ -1,5 +1,5 @@
 import type { CrmArtist } from '../types'
-import type { SignatureStatus } from '../data/artists'
+import type { SignatureStatus } from '../data/types'
 
 export type ArtistFormValues = {
   nameHe: string
