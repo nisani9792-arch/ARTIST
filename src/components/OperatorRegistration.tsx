@@ -6,10 +6,11 @@ import './OperatorRegistration.css'
 type OperatorRegistrationProps = {
   onRegister: (displayName: string) => Promise<string | null>
   error?: string
+  defaultName?: string
 }
 
-export const OperatorRegistration = ({ onRegister, error }: OperatorRegistrationProps) => {
-  const [name, setName] = useState('')
+export const OperatorRegistration = ({ onRegister, error, defaultName }: OperatorRegistrationProps) => {
+  const [name, setName] = useState(defaultName?.trim() ?? '')
   const [busy, setBusy] = useState(false)
   const [localError, setLocalError] = useState('')
 

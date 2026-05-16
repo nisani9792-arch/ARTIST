@@ -452,6 +452,7 @@ function App() {
       <OperatorRegistration
         onRegister={registerOperator}
         error={operatorError || undefined}
+        defaultName={operatorName ?? undefined}
       />
     )
   }

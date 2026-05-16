@@ -1,5 +1,10 @@
 import { useCallback, useEffect, useState } from 'react'
-import { fetchAccessState, registerOperator as registerOperatorApi, unlockGate } from '../api/access'
+import {
+  fetchAccessState,
+  registerOperator as registerOperatorApi,
+  unlockGate,
+  type AccessState,
+} from '../api/access'
 import { getStoredOperatorName, setStoredOperatorName } from '../lib/operator'
 
 const RESET_MS = 1600
@@ -18,21 +23,11 @@ export const useAccessGate = () => {
     setPhase('ready')
   }, [])
 
-  const refresh = useCallback(async () => {
-    setError('')
-    try {
-      const access = await fetchAccessState()
-      const local = getStoredOperatorName()
-
+  const resolveAfterUnlock = useCallback(
+    async (access: AccessState) => {
       if (!access.gateUnlocked) {
         setOperatorName(null)
         setPhase('locked')
-        return
-      }
-
-      if (local) {
-        setOperatorName(local)
-        setPhase('ready')
         return
       }
 
@@ -41,19 +36,35 @@ export const useAccessGate = () => {
         return
       }
 
-      setOperatorName(null)
-      setPhase('register')
-    } catch {
       const local = getStoredOperatorName()
       if (local) {
-        setOperatorName(local)
-        setPhase('ready')
-        return
+        try {
+          const registered = await registerOperatorApi(local)
+          if (registered.displayName) {
+            applyReady(registered.displayName)
+            return
+          }
+        } catch {
+          // fall through to manual registration
+        }
       }
+
+      setOperatorName(local)
+      setPhase('register')
+    },
+    [applyReady],
+  )
+
+  const refresh = useCallback(async () => {
+    setError('')
+    try {
+      const access = await fetchAccessState()
+      await resolveAfterUnlock(access)
+    } catch {
       setOperatorName(null)
       setPhase('locked')
     }
-  }, [applyReady])
+  }, [resolveAfterUnlock])
 
   useEffect(() => {
     void refresh()
@@ -62,21 +73,8 @@ export const useAccessGate = () => {
   const unlock = useCallback(async () => {
     setError('')
     const access = await unlockGate()
-    if (!access.gateUnlocked) {
-      setPhase('locked')
-      return
-    }
-
-    const local = getStoredOperatorName()
-    if (local) {
-      setOperatorName(local)
-      setPhase('ready')
-      return
-    }
-
-    setOperatorName(null)
-    setPhase('register')
-  }, [])
+    await resolveAfterUnlock(access)
+  }, [resolveAfterUnlock])
 
   const register = useCallback(
     async (name: string) => {
