@@ -21,9 +21,10 @@ export const buildArtistSearchRows = (artists: CrmArtist[]): ArtistSearchRow[] =
   }))
 
 const scoreArtist = (artist: CrmArtist) =>
-  (artist.status === 'stuck' ? 70 : 0) +
-  (artist.status === 'unsigned' ? 45 : 0) +
-  (artist.owner === 'לא שויך' ? 25 : 0) +
+  (artist.status === 'stuck' ? 80 : 0) +
+  (artist.status === 'unsigned' ? 50 : 0) +
+  (artist.owner === 'לא שויך' ? 30 : 0) +
+  (!artist.notes.trim() ? 12 : 0) +
   Math.min(artist.tags.length, 10) * 2
 
 export const filterArtistRows = (
@@ -55,7 +56,10 @@ export const filterArtistRows = (
     const matchesTag = tagFilter === 'all' || artist.tags.includes(tagFilter)
     const matchesGenre = genreFilter === 'all' || artist.genres.includes(genreFilter)
     const matchesAction =
-      !needsActionOnly || artist.status !== 'signed' || artist.owner === 'לא שויך'
+      !needsActionOnly ||
+      artist.status === 'stuck' ||
+      artist.status === 'unsigned' ||
+      artist.owner === 'לא שויך'
 
     return (
       matchesSearch &&
@@ -79,6 +83,15 @@ export const filterArtistRows = (
 
   if (sortBy === 'tags') {
     filtered.sort((a, b) => b.tags.length - a.tags.length)
+    return filtered
+  }
+
+  if (sortBy === 'updated') {
+    filtered.sort((a, b) => {
+      const ta = a.updatedAt ? Date.parse(a.updatedAt) : 0
+      const tb = b.updatedAt ? Date.parse(b.updatedAt) : 0
+      return tb - ta
+    })
     return filtered
   }
 

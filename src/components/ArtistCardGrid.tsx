@@ -28,7 +28,8 @@ export const ArtistCardGrid = memo(function ArtistCardGrid({
   if (artists.length === 0) {
     return (
       <div className="empty-state">
-        {isLoading ? 'טוען נתונים...' : 'לא נמצאו אומנים לפי הסינון'}
+        <p>{isLoading ? 'טוען נתונים...' : 'לא נמצאו אומנים לפי הסינון'}</p>
+        {!isLoading && <span className="empty-hint">נסו לשנות את החיפוש או את הסינונים</span>}
       </div>
     )
   }
@@ -38,6 +39,7 @@ export const ArtistCardGrid = memo(function ArtistCardGrid({
       {artists.map((artist) => {
         const meta = statusMeta[artist.status]
         const displayName = artist.nameHe || artist.nameEn || 'ללא שם'
+        const subline = artist.latestAlbum || artist.nameEn || artist.genres[0] || ''
 
         return (
           <article
@@ -69,9 +71,19 @@ export const ArtistCardGrid = memo(function ArtistCardGrid({
               <span className={`badge ${meta.tone}`}>{meta.label}</span>
             </div>
 
-            <h3 className="mini-card-name" title={displayName}>
-              {displayName}
-            </h3>
+            <div className="mini-card-meta">
+              <h3 className="mini-card-name" title={displayName}>
+                {displayName}
+              </h3>
+              {subline && (
+                <p className="mini-card-sub" title={subline}>
+                  {subline}
+                </p>
+              )}
+              {artist.priority && (
+                <span className="mini-card-priority">{artist.priority}</span>
+              )}
+            </div>
 
             <label
               className="mini-card-field"

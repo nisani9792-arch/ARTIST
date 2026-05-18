@@ -427,6 +427,28 @@ function App() {
   const pageAllSelected =
     visibleArtists.length > 0 && visibleArtists.every((a) => selectedIds.has(a.id))
 
+  const hasActiveFilters =
+    Boolean(debouncedQuery.trim()) ||
+    statusFilter !== 'all' ||
+    ownerFilter !== 'all' ||
+    tagFilter !== 'all' ||
+    genreFilter !== 'all' ||
+    needsActionOnly
+
+  const clearFilters = () => {
+    setQuery('')
+    setStatusFilter('all')
+    setOwnerFilter('all')
+    setTagFilter('all')
+    setGenreFilter('all')
+    setNeedsActionOnly(false)
+  }
+
+  const filterPercent =
+    headerStats.total > 0
+      ? Math.round((filteredArtists.length / headerStats.total) * 100)
+      : 0
+
   if (phase === 'loading') {
     return (
       <div className="lock-screen" aria-busy="true" aria-label="טוען">
@@ -508,6 +530,11 @@ function App() {
           <span className="stat-pill stuck">
             תקועים <strong>{headerStats.stuck.toLocaleString('he-IL')}</strong>
           </span>
+          {headerStats.unassigned > 0 && (
+            <span className="stat-pill unassigned">
+              לא שויכו <strong>{headerStats.unassigned.toLocaleString('he-IL')}</strong>
+            </span>
+          )}
         </div>
 
         <div className="header-actions">
@@ -573,6 +600,35 @@ function App() {
 
       {serverError && <div className="app-alert">{serverError}</div>}
 
+      <div className="results-bar">
+        <div className="results-summary">
+          <span>
+            מציג <strong>{filteredArtists.length.toLocaleString('he-IL')}</strong> מתוך{' '}
+            <strong>{headerStats.total.toLocaleString('he-IL')}</strong>
+          </span>
+          {selectedCount > 0 && (
+            <span>
+              · נבחרו <strong>{selectedCount}</strong>
+            </span>
+          )}
+        </div>
+        <div
+          className="results-progress"
+          role="progressbar"
+          aria-valuenow={filterPercent}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-label="אחוז מהמאגר"
+        >
+          <div className="results-progress-fill" style={{ width: `${filterPercent}%` }} />
+        </div>
+        {hasActiveFilters && (
+          <button className="btn btn-ghost btn-sm" type="button" onClick={clearFilters}>
+            נקה סינון
+          </button>
+        )}
+      </div>
+
       <div className={`toolbar ${filtersOpen ? 'toolbar--open' : ''}`}>
         <label className="search-field">
           <Search size={14} />
@@ -636,6 +692,7 @@ function App() {
           <option value="name">שם</option>
           <option value="status">סטטוס</option>
           <option value="tags">תגיות</option>
+          <option value="updated">עודכנו לאחרונה</option>
         </select>
 
         <label className="toolbar-check">

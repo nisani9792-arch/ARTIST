@@ -48,6 +48,13 @@ export const ArtistDetailPanel = ({
         </header>
 
         <div className="detail-body">
+          {artist.priority && (
+            <div className="detail-field">
+              <span>עדיפות</span>
+              <p className="detail-priority">{artist.priority}</p>
+            </div>
+          )}
+
           <div className="detail-field">
             <span>גורם מטפל</span>
             <p>{artist.owner}</p>
