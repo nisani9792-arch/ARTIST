@@ -7,5 +7,5 @@ export type CrmArtist = ArtistRecord & {
 export type ViewMode = 'cards' | 'table'
 export type StatusFilter = SignatureStatus | 'all'
 export type OwnerFilter = string | 'all'
-export type SortOption = 'smart' | 'name' | 'status' | 'tags' | 'updated'
+export type SortOption = 'smart' | 'name' | 'status' | 'tags'
 export type SaveStatus = 'idle' | 'loading' | 'saving' | 'error'
