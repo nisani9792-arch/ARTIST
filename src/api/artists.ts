@@ -1,8 +1,10 @@
 import type { AccessState } from './access'
+import { request } from './client'
 import type { ArtistRecord, SignatureStatus } from '../data/types'
 
 export type CrmArtist = ArtistRecord & {
   updatedAt?: string
+  updatedBy?: string
 }
 
 export type HeaderStats = {
@@ -13,8 +15,32 @@ export type HeaderStats = {
   unassigned: number
 }
 
+export type ArtistFilters = {
+  q?: string
+  status?: SignatureStatus | 'all'
+  owner?: string
+  tag?: string
+  genre?: string
+  needsAction?: boolean
+  myQueue?: boolean
+  sort?: 'smart' | 'name' | 'status' | 'tags'
+  page?: number
+  limit?: number
+}
+
+export type FilterOptions = {
+  owners: string[]
+  tags: [string, number][]
+  genres: string[]
+}
+
 type ArtistsResponse = {
   artists: CrmArtist[]
+  total: number
+  page: number
+  limit: number
+  stats: HeaderStats
+  filters?: FilterOptions
 }
 
 type ArtistResponse = {
@@ -25,52 +51,54 @@ type DeleteIdsResponse = {
   ids: string[]
 }
 
-type StatsResponse = {
-  stats: HeaderStats
-}
-
 type BootstrapResponse = {
   access: AccessState
   artists: CrmArtist[]
+  total: number
+  page: number
+  limit: number
   stats: HeaderStats
+  filters: FilterOptions
 }
 
-const parseError = async (response: Response) => {
-  const text = await response.text()
-  try {
-    const json = JSON.parse(text) as { error?: string }
-    if (json.error) return json.error
-  } catch {
-    // ignore
-  }
-  return text || `Request failed with status ${response.status}`
+const buildSearchParams = (filters: ArtistFilters = {}) => {
+  const params = new URLSearchParams()
+
+  if (filters.q) params.set('q', filters.q)
+  if (filters.status && filters.status !== 'all') params.set('status', filters.status)
+  if (filters.owner && filters.owner !== 'all') params.set('owner', filters.owner)
+  if (filters.tag && filters.tag !== 'all') params.set('tag', filters.tag)
+  if (filters.genre && filters.genre !== 'all') params.set('genre', filters.genre)
+  if (filters.needsAction) params.set('needsAction', 'true')
+  if (filters.myQueue) params.set('myQueue', 'true')
+  if (filters.sort) params.set('sort', filters.sort)
+  if (filters.page) params.set('page', String(filters.page))
+  if (filters.limit) params.set('limit', String(filters.limit))
+
+  return params
 }
 
-const request = async <T>(url: string, options?: RequestInit): Promise<T> => {
-  const response = await fetch(url, {
-    headers: {
-      'Content-Type': 'application/json',
-      ...options?.headers,
-    },
-    ...options,
-  })
-
-  if (!response.ok) {
-    throw new Error(await parseError(response))
-  }
-
-  return response.json() as Promise<T>
+export const fetchBootstrap = async (filters: ArtistFilters = {}) => {
+  const params = buildSearchParams(filters)
+  const query = params.toString()
+  return request<BootstrapResponse>(`/api/bootstrap${query ? `?${query}` : ''}`)
 }
 
-export const fetchBootstrap = async () => request<BootstrapResponse>('/api/bootstrap')
+export const fetchArtistsPage = async (filters: ArtistFilters = {}) => {
+  const params = buildSearchParams(filters)
+  const query = params.toString()
+  return request<ArtistsResponse>(`/api/artists${query ? `?${query}` : ''}`)
+}
 
-export const fetchArtists = async () => {
-  const response = await request<ArtistsResponse>('/api/artists')
-  return response.artists
+export const fetchFilterOptions = async () => request<FilterOptions>('/api/artists/filters')
+
+export const fetchArtistById = async (id: string) => {
+  const response = await request<ArtistResponse>(`/api/artists/${encodeURIComponent(id)}`)
+  return response.artist
 }
 
 export const fetchStats = async () => {
-  const response = await request<StatsResponse>('/api/stats')
+  const response = await request<{ stats: HeaderStats }>('/api/stats')
   return response.stats
 }
 
@@ -107,7 +135,7 @@ export const bulkPatchArtists = async ({
   priority: string
   status: SignatureStatus
 }) => {
-  const response = await request<ArtistsResponse>('/api/artists/bulk', {
+  const response = await request<{ artists: CrmArtist[] }>('/api/artists/bulk', {
     method: 'POST',
     body: JSON.stringify({ ids, owner, priority, status }),
   })
@@ -151,4 +179,42 @@ export const downloadBackup = async () => {
 
   localStorage.setItem('artist-last-backup', backup.exportedAt)
   return backup
+}
+
+export const exportArtistsCsv = (artists: CrmArtist[], filename = 'artist-crm-export.csv') => {
+  const formatCsvValue = (value: string | string[]) => {
+    const text = Array.isArray(value) ? value.join(', ') : value
+    return `"${text.replace(/"/g, '""')}"`
+  }
+
+  const headers = ['שם', 'שם באנגלית', 'סטטוס', 'גורם מטפל', 'זאנרים', 'תגיות', 'אלבום', 'הערות']
+  const statusLabels = { signed: 'חתום', unsigned: 'לא חתום', stuck: 'תקוע' }
+  const rows = artists.map((artist) => [
+    artist.nameHe,
+    artist.nameEn,
+    statusLabels[artist.status],
+    artist.owner,
+    artist.genres,
+    artist.tags,
+    artist.latestAlbum,
+    artist.notes,
+  ])
+  const csv = [headers, ...rows].map((row) => row.map(formatCsvValue).join(',')).join('\n')
+  const blob = new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+
+  if (typeof navigator !== 'undefined' && navigator.share && navigator.canShare?.({ files: [] })) {
+    const file = new File([blob], filename, { type: 'text/csv' })
+    if (navigator.canShare({ files: [file] })) {
+      void navigator.share({ files: [file], title: filename })
+      URL.revokeObjectURL(url)
+      return
+    }
+  }
+
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  link.click()
+  URL.revokeObjectURL(url)
 }

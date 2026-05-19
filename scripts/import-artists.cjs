@@ -3,31 +3,14 @@ const path = require('node:path')
 const { readSourceArtists } = require('./read-source-artists.cjs')
 
 const root = path.resolve(__dirname, '..')
-
-const buildOutput = (artists) => `export type SignatureStatus = 'signed' | 'unsigned' | 'stuck'
-
-export type ArtistRecord = {
-  id: string
-  nameHe: string
-  nameEn: string
-  genres: string[]
-  tags: string[]
-  latestAlbum: string
-  status: SignatureStatus
-  owner: string
-  source: string
-  notes: string
-  priority: string
-  updatedAt?: string
-}
-
-export const initialArtists: ArtistRecord[] = ${JSON.stringify(artists, null, 2)}
-`
+const seedDir = path.join(root, 'data', 'seed')
 
 const importArtists = async () => {
   const artists = await readSourceArtists()
-  const outputPath = path.join(root, 'src', 'data', 'artists.ts')
-  fs.writeFileSync(outputPath, buildOutput(artists))
+  fs.mkdirSync(seedDir, { recursive: true })
+
+  const jsonPath = path.join(seedDir, 'artists.json')
+  fs.writeFileSync(jsonPath, JSON.stringify(artists, null, 2))
 
   const counts = artists.reduce(
     (acc, artist) => {
@@ -38,7 +21,9 @@ const importArtists = async () => {
     { total: 0, signed: 0, unsigned: 0, stuck: 0 },
   )
 
-  console.log(`Imported ${counts.total} artists (${counts.signed} signed, ${counts.unsigned} unsigned).`)
+  console.log(
+    `Imported ${counts.total} artists (${counts.signed} signed, ${counts.unsigned} unsigned) to data/seed/artists.json`,
+  )
 }
 
 importArtists().catch((error) => {

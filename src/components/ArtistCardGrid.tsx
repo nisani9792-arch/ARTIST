@@ -1,6 +1,7 @@
 import { memo } from 'react'
 import type { SignatureStatus } from '../data/types'
 import type { CrmArtist } from '../types'
+import { priorityForStatus } from '../lib/constants'
 
 type StatusMeta = Record<SignatureStatus, { label: string; tone: string }>
 
@@ -43,22 +44,9 @@ export const ArtistCardGrid = memo(function ArtistCardGrid({
           <article
             key={artist.id}
             className={`mini-card ${meta.tone} ${selectedIds.has(artist.id) ? 'selected' : ''}`}
-            onClick={() => onOpen(artist)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault()
-                onOpen(artist)
-              }
-            }}
-            role="button"
-            tabIndex={0}
           >
             <div className="mini-card-top">
-              <label
-                className="mini-card-check"
-                onClick={(e) => e.stopPropagation()}
-                onKeyDown={(e) => e.stopPropagation()}
-              >
+              <label className="mini-card-check">
                 <input
                   type="checkbox"
                   checked={selectedIds.has(artist.id)}
@@ -66,18 +54,33 @@ export const ArtistCardGrid = memo(function ArtistCardGrid({
                   aria-label={`בחר ${displayName}`}
                 />
               </label>
-              <span className={`badge ${meta.tone}`}>{meta.label}</span>
+              <label className="mini-card-status">
+                <select
+                  className={`badge-select ${meta.tone}`}
+                  value={artist.status}
+                  aria-label={`סטטוס ${displayName}`}
+                  onChange={(e) => {
+                    const status = e.target.value as SignatureStatus
+                    onUpdate(artist.id, {
+                      status,
+                      priority: priorityForStatus(status),
+                    })
+                  }}
+                >
+                  <option value="signed">חתום</option>
+                  <option value="unsigned">לא חתום</option>
+                  <option value="stuck">תקוע</option>
+                </select>
+              </label>
             </div>
 
-            <h3 className="mini-card-name" title={displayName}>
-              {displayName}
-            </h3>
+            <button type="button" className="mini-card-open" onClick={() => onOpen(artist)}>
+              <h3 className="mini-card-name" title={displayName}>
+                {displayName}
+              </h3>
+            </button>
 
-            <label
-              className="mini-card-field"
-              onClick={(e) => e.stopPropagation()}
-              onKeyDown={(e) => e.stopPropagation()}
-            >
+            <label className="mini-card-field">
               <span>גורם מטפל</span>
               <select
                 value={artist.owner}

@@ -1,52 +1,43 @@
-import { Database, Filter, LayoutGrid, Plus, Table2 } from 'lucide-react'
-import type { ViewMode } from '../types'
+import { Database, Home, LayoutGrid, Plus, Search } from 'lucide-react'
 
 type MobileBottomBarProps = {
-  viewMode: ViewMode
-  filtersOpen: boolean
-  onToggleFilters: () => void
-  onSetView: (mode: ViewMode) => void
+  searchOpen: boolean
+  onNavigateHome: () => void
+  onNavigateArtists: () => void
+  onToggleSearch: () => void
   onNewArtist: () => void
   onBackup: () => void
 }
 
 export const MobileBottomBar = ({
-  viewMode,
-  filtersOpen,
-  onToggleFilters,
-  onSetView,
+  searchOpen,
+  onNavigateHome,
+  onNavigateArtists,
+  onToggleSearch,
   onNewArtist,
   onBackup,
 }: MobileBottomBarProps) => {
   return (
     <nav className="mobile-bottom-bar" aria-label="ניווט נייד">
-      <button
-        type="button"
-        className={`mobile-nav-btn ${filtersOpen ? 'active' : ''}`}
-        onClick={onToggleFilters}
-      >
-        <Filter size={20} />
-        <span>סינון</span>
+      <button type="button" className="mobile-nav-btn" onClick={onNavigateHome}>
+        <Home size={20} />
+        <span>בית</span>
+      </button>
+      <button type="button" className="mobile-nav-btn" onClick={onNavigateArtists}>
+        <LayoutGrid size={20} />
+        <span>אומנים</span>
       </button>
       <button
         type="button"
-        className={`mobile-nav-btn ${viewMode === 'cards' ? 'active' : ''}`}
-        onClick={() => onSetView('cards')}
+        className={`mobile-nav-btn ${searchOpen ? 'active' : ''}`}
+        onClick={onToggleSearch}
       >
-        <LayoutGrid size={20} />
-        <span>כרטיסים</span>
+        <Search size={20} />
+        <span>חיפוש</span>
       </button>
       <button type="button" className="mobile-nav-btn mobile-nav-fab" onClick={onNewArtist}>
         <Plus size={22} />
         <span>חדש</span>
-      </button>
-      <button
-        type="button"
-        className={`mobile-nav-btn ${viewMode === 'table' ? 'active' : ''}`}
-        onClick={() => onSetView('table')}
-      >
-        <Table2 size={20} />
-        <span>טבלה</span>
       </button>
       <button type="button" className="mobile-nav-btn" onClick={onBackup}>
         <Database size={20} />

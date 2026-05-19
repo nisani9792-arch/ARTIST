@@ -4,6 +4,7 @@ import {
   registerOperator as registerOperatorApi,
   unlockGate,
   type AccessState,
+  type UnlockMethod,
 } from '../api/access'
 import { getStoredOperatorName, setStoredOperatorName } from '../lib/operator'
 
@@ -59,22 +60,34 @@ export const useAccessGate = () => {
     setError('')
     try {
       const access = await fetchAccessState()
-      await resolveAfterUnlock(access)
+      if (access.gateUnlocked && access.displayName) {
+        applyReady(access.displayName)
+        return
+      }
+      if (access.gateUnlocked) {
+        await resolveAfterUnlock(access)
+        return
+      }
+      setOperatorName(null)
+      setPhase('locked')
     } catch {
       setOperatorName(null)
       setPhase('locked')
     }
-  }, [resolveAfterUnlock])
+  }, [applyReady, resolveAfterUnlock])
 
   useEffect(() => {
     void refresh()
   }, [refresh])
 
-  const unlock = useCallback(async () => {
-    setError('')
-    const access = await unlockGate()
-    await resolveAfterUnlock(access)
-  }, [resolveAfterUnlock])
+  const unlock = useCallback(
+    async (options?: { method?: UnlockMethod; secret?: string }) => {
+      setError('')
+      const access = await unlockGate(options)
+      await resolveAfterUnlock(access)
+    },
+    [resolveAfterUnlock],
+  )
 
   const register = useCallback(
     async (name: string) => {
@@ -101,7 +114,7 @@ export const useAccessGate = () => {
 
       pressCount += 1
       if (pressCount >= REQUIRED_PRESSES) {
-        void unlock().catch((err) => {
+        void unlock({ method: 'shortcut' }).catch((err) => {
           setError(err instanceof Error ? err.message : 'פתיחת השער נכשלה')
         })
         pressCount = 0

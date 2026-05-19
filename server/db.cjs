@@ -30,6 +30,7 @@ if (!databaseUrl) {
 const sql = neon(databaseUrl)
 
 const allowedStatuses = new Set(['signed', 'unsigned', 'stuck'])
+const UNASSIGNED_OWNER = 'לא שויך'
 
 const normalizeArtist = (artist) => ({
   id: artist.id,
@@ -39,11 +40,12 @@ const normalizeArtist = (artist) => ({
   tags: artist.tags ?? [],
   latestAlbum: artist.latest_album ?? '',
   status: artist.status,
-  owner: artist.owner ?? 'לא שויך',
+  owner: artist.owner ?? UNASSIGNED_OWNER,
   source: artist.source ?? '',
   notes: artist.notes ?? '',
   priority: artist.priority ?? '',
   updatedAt: artist.updated_at,
+  updatedBy: artist.updated_by ?? '',
 })
 
 const setupDatabase = async () => {
@@ -60,13 +62,18 @@ const setupDatabase = async () => {
       source TEXT NOT NULL DEFAULT '',
       notes TEXT NOT NULL DEFAULT '',
       priority TEXT NOT NULL DEFAULT '',
-      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_by TEXT NOT NULL DEFAULT ''
     )
   `
+
+  await sql`ALTER TABLE artists ADD COLUMN IF NOT EXISTS updated_by TEXT NOT NULL DEFAULT ''`
 
   await sql`CREATE INDEX IF NOT EXISTS artists_status_idx ON artists (status)`
   await sql`CREATE INDEX IF NOT EXISTS artists_owner_idx ON artists (owner)`
   await sql`CREATE INDEX IF NOT EXISTS artists_updated_at_idx ON artists (updated_at DESC)`
+  await sql`CREATE INDEX IF NOT EXISTS artists_tags_gin_idx ON artists USING GIN (tags)`
+  await sql`CREATE INDEX IF NOT EXISTS artists_genres_gin_idx ON artists USING GIN (genres)`
 
   await sql`
     CREATE TABLE IF NOT EXISTS ip_access (
@@ -154,21 +161,36 @@ const withOperatorOwner = (patch, operator) => {
   return { ...patch, owner: operator }
 }
 
+const artistSelectFields = sql`
+  id,
+  name_he,
+  name_en,
+  genres,
+  tags,
+  latest_album,
+  status,
+  owner,
+  source,
+  notes,
+  priority,
+  updated_at,
+  updated_by
+`
+
+const getArtistById = async (id) => {
+  const rows = await sql`
+    SELECT ${artistSelectFields}
+    FROM artists
+    WHERE id = ${id}
+    LIMIT 1
+  `
+
+  return rows[0] ? normalizeArtist(rows[0]) : null
+}
+
 const getArtists = async () => {
   const rows = await sql`
-    SELECT
-      id,
-      name_he,
-      name_en,
-      genres,
-      tags,
-      latest_album,
-      status,
-      owner,
-      source,
-      notes,
-      priority,
-      updated_at
+    SELECT ${artistSelectFields}
     FROM artists
     ORDER BY name_he COLLATE "C"
   `
@@ -183,7 +205,7 @@ const getStats = async () => {
       COUNT(*) FILTER (WHERE status = 'signed')::INT AS signed,
       COUNT(*) FILTER (WHERE status = 'unsigned')::INT AS unsigned,
       COUNT(*) FILTER (WHERE status = 'stuck')::INT AS stuck,
-      COUNT(*) FILTER (WHERE owner = 'לא שויך')::INT AS unassigned
+      COUNT(*) FILTER (WHERE owner = ${UNASSIGNED_OWNER})::INT AS unassigned
     FROM artists
   `
 
@@ -199,61 +221,304 @@ const parseTagList = (value) => {
     .filter(Boolean)
 }
 
-const updateArtist = async (id, patch, operator) => {
-  const effectivePatch = withOperatorOwner(patch, operator)
-  const currentRows = await sql`
-    SELECT
-      id,
-      name_he,
-      name_en,
-      genres,
-      tags,
-      latest_album,
-      status,
-      owner,
-      source,
-      notes,
-      priority,
-      updated_at
+const clampLimit = (limit) => Math.min(Math.max(1, Number(limit) || 48), 200)
+
+const buildSearchFilters = ({
+  q,
+  status,
+  owner,
+  tag,
+  genre,
+  needsAction,
+  myQueue,
+  operatorName,
+}) => {
+  const query = String(q ?? '').trim()
+  const likeQuery = query ? `%${query}%` : null
+  const statusValue = status === 'all' ? null : status
+  const ownerValue = owner === 'all' ? null : owner
+  const tagValue = tag === 'all' ? null : tag
+  const genreValue = genre === 'all' ? null : genre
+  const needsActionFlag = Boolean(needsAction)
+  const myQueueFlag = Boolean(myQueue)
+  const queueOwner = operatorName ?? ''
+
+  return {
+    likeQuery,
+    statusValue,
+    ownerValue,
+    tagValue,
+    genreValue,
+    needsActionFlag,
+    myQueueFlag,
+    queueOwner,
+  }
+}
+
+const searchArtists = async (params = {}) => {
+  const sort = params.sort ?? 'smart'
+  const page = Math.max(1, Number(params.page) || 1)
+  const limit = clampLimit(params.limit)
+  const offset = (page - 1) * limit
+  const filters = buildSearchFilters(params)
+
+  const [countRow] = await sql`
+    SELECT COUNT(*)::INT AS total
     FROM artists
-    WHERE id = ${id}
-    LIMIT 1
+    WHERE
+      (${filters.statusValue}::text IS NULL OR status = ${filters.statusValue})
+      AND (${filters.ownerValue}::text IS NULL OR owner = ${filters.ownerValue})
+      AND (${filters.tagValue}::text IS NULL OR ${filters.tagValue} = ANY(tags))
+      AND (${filters.genreValue}::text IS NULL OR ${filters.genreValue} = ANY(genres))
+      AND (
+        ${!filters.needsActionFlag}::boolean
+        OR status <> 'signed'
+        OR owner = ${UNASSIGNED_OWNER}
+      )
+      AND (
+        ${!filters.myQueueFlag}::boolean
+        OR (
+          owner = ${filters.queueOwner}
+          AND status <> 'signed'
+        )
+      )
+      AND (
+        ${filters.likeQuery}::text IS NULL
+        OR name_he ILIKE ${filters.likeQuery}
+        OR name_en ILIKE ${filters.likeQuery}
+        OR latest_album ILIKE ${filters.likeQuery}
+        OR owner ILIKE ${filters.likeQuery}
+        OR source ILIKE ${filters.likeQuery}
+        OR notes ILIKE ${filters.likeQuery}
+        OR priority ILIKE ${filters.likeQuery}
+        OR EXISTS (SELECT 1 FROM unnest(tags) AS tag_item WHERE tag_item ILIKE ${filters.likeQuery})
+        OR EXISTS (SELECT 1 FROM unnest(genres) AS genre_item WHERE genre_item ILIKE ${filters.likeQuery})
+      )
   `
 
-  if (currentRows.length === 0) {
-    return null
+  const total = countRow?.total ?? 0
+
+  let rows
+  if (sort === 'name') {
+    rows = await sql`
+      SELECT ${artistSelectFields}
+      FROM artists
+      WHERE
+        (${filters.statusValue}::text IS NULL OR status = ${filters.statusValue})
+        AND (${filters.ownerValue}::text IS NULL OR owner = ${filters.ownerValue})
+        AND (${filters.tagValue}::text IS NULL OR ${filters.tagValue} = ANY(tags))
+        AND (${filters.genreValue}::text IS NULL OR ${filters.genreValue} = ANY(genres))
+        AND (
+          ${!filters.needsActionFlag}::boolean
+          OR status <> 'signed'
+          OR owner = ${UNASSIGNED_OWNER}
+        )
+        AND (
+          ${!filters.myQueueFlag}::boolean
+          OR (
+            owner = ${filters.queueOwner}
+            AND status <> 'signed'
+          )
+        )
+        AND (
+          ${filters.likeQuery}::text IS NULL
+          OR name_he ILIKE ${filters.likeQuery}
+          OR name_en ILIKE ${filters.likeQuery}
+          OR latest_album ILIKE ${filters.likeQuery}
+          OR owner ILIKE ${filters.likeQuery}
+          OR source ILIKE ${filters.likeQuery}
+          OR notes ILIKE ${filters.likeQuery}
+          OR priority ILIKE ${filters.likeQuery}
+          OR EXISTS (SELECT 1 FROM unnest(tags) AS tag_item WHERE tag_item ILIKE ${filters.likeQuery})
+          OR EXISTS (SELECT 1 FROM unnest(genres) AS genre_item WHERE genre_item ILIKE ${filters.likeQuery})
+        )
+      ORDER BY name_he COLLATE "C"
+      LIMIT ${limit}
+      OFFSET ${offset}
+    `
+  } else if (sort === 'status') {
+    rows = await sql`
+      SELECT ${artistSelectFields}
+      FROM artists
+      WHERE
+        (${filters.statusValue}::text IS NULL OR status = ${filters.statusValue})
+        AND (${filters.ownerValue}::text IS NULL OR owner = ${filters.ownerValue})
+        AND (${filters.tagValue}::text IS NULL OR ${filters.tagValue} = ANY(tags))
+        AND (${filters.genreValue}::text IS NULL OR ${filters.genreValue} = ANY(genres))
+        AND (
+          ${!filters.needsActionFlag}::boolean
+          OR status <> 'signed'
+          OR owner = ${UNASSIGNED_OWNER}
+        )
+        AND (
+          ${!filters.myQueueFlag}::boolean
+          OR (
+            owner = ${filters.queueOwner}
+            AND status <> 'signed'
+          )
+        )
+        AND (
+          ${filters.likeQuery}::text IS NULL
+          OR name_he ILIKE ${filters.likeQuery}
+          OR name_en ILIKE ${filters.likeQuery}
+          OR latest_album ILIKE ${filters.likeQuery}
+          OR owner ILIKE ${filters.likeQuery}
+          OR source ILIKE ${filters.likeQuery}
+          OR notes ILIKE ${filters.likeQuery}
+          OR priority ILIKE ${filters.likeQuery}
+          OR EXISTS (SELECT 1 FROM unnest(tags) AS tag_item WHERE tag_item ILIKE ${filters.likeQuery})
+          OR EXISTS (SELECT 1 FROM unnest(genres) AS genre_item WHERE genre_item ILIKE ${filters.likeQuery})
+        )
+      ORDER BY status, name_he COLLATE "C"
+      LIMIT ${limit}
+      OFFSET ${offset}
+    `
+  } else if (sort === 'tags') {
+    rows = await sql`
+      SELECT ${artistSelectFields}
+      FROM artists
+      WHERE
+        (${filters.statusValue}::text IS NULL OR status = ${filters.statusValue})
+        AND (${filters.ownerValue}::text IS NULL OR owner = ${filters.ownerValue})
+        AND (${filters.tagValue}::text IS NULL OR ${filters.tagValue} = ANY(tags))
+        AND (${filters.genreValue}::text IS NULL OR ${filters.genreValue} = ANY(genres))
+        AND (
+          ${!filters.needsActionFlag}::boolean
+          OR status <> 'signed'
+          OR owner = ${UNASSIGNED_OWNER}
+        )
+        AND (
+          ${!filters.myQueueFlag}::boolean
+          OR (
+            owner = ${filters.queueOwner}
+            AND status <> 'signed'
+          )
+        )
+        AND (
+          ${filters.likeQuery}::text IS NULL
+          OR name_he ILIKE ${filters.likeQuery}
+          OR name_en ILIKE ${filters.likeQuery}
+          OR latest_album ILIKE ${filters.likeQuery}
+          OR owner ILIKE ${filters.likeQuery}
+          OR source ILIKE ${filters.likeQuery}
+          OR notes ILIKE ${filters.likeQuery}
+          OR priority ILIKE ${filters.likeQuery}
+          OR EXISTS (SELECT 1 FROM unnest(tags) AS tag_item WHERE tag_item ILIKE ${filters.likeQuery})
+          OR EXISTS (SELECT 1 FROM unnest(genres) AS genre_item WHERE genre_item ILIKE ${filters.likeQuery})
+        )
+      ORDER BY COALESCE(array_length(tags, 1), 0) DESC, name_he COLLATE "C"
+      LIMIT ${limit}
+      OFFSET ${offset}
+    `
+  } else {
+    rows = await sql`
+      SELECT ${artistSelectFields}
+      FROM artists
+      WHERE
+        (${filters.statusValue}::text IS NULL OR status = ${filters.statusValue})
+        AND (${filters.ownerValue}::text IS NULL OR owner = ${filters.ownerValue})
+        AND (${filters.tagValue}::text IS NULL OR ${filters.tagValue} = ANY(tags))
+        AND (${filters.genreValue}::text IS NULL OR ${filters.genreValue} = ANY(genres))
+        AND (
+          ${!filters.needsActionFlag}::boolean
+          OR status <> 'signed'
+          OR owner = ${UNASSIGNED_OWNER}
+        )
+        AND (
+          ${!filters.myQueueFlag}::boolean
+          OR (
+            owner = ${filters.queueOwner}
+            AND status <> 'signed'
+          )
+        )
+        AND (
+          ${filters.likeQuery}::text IS NULL
+          OR name_he ILIKE ${filters.likeQuery}
+          OR name_en ILIKE ${filters.likeQuery}
+          OR latest_album ILIKE ${filters.likeQuery}
+          OR owner ILIKE ${filters.likeQuery}
+          OR source ILIKE ${filters.likeQuery}
+          OR notes ILIKE ${filters.likeQuery}
+          OR priority ILIKE ${filters.likeQuery}
+          OR EXISTS (SELECT 1 FROM unnest(tags) AS tag_item WHERE tag_item ILIKE ${filters.likeQuery})
+          OR EXISTS (SELECT 1 FROM unnest(genres) AS genre_item WHERE genre_item ILIKE ${filters.likeQuery})
+        )
+      ORDER BY
+        (CASE WHEN status = 'stuck' THEN 70 WHEN status = 'unsigned' THEN 45 ELSE 0 END)
+        + (CASE WHEN owner = ${UNASSIGNED_OWNER} THEN 25 ELSE 0 END)
+        + LEAST(COALESCE(array_length(tags, 1), 0), 10) * 2 DESC,
+        name_he COLLATE "C"
+      LIMIT ${limit}
+      OFFSET ${offset}
+    `
   }
 
-  const current = currentRows[0]
-  const nextStatus = effectivePatch.status ?? current.status
+  return {
+    artists: rows.map(normalizeArtist),
+    total,
+    page,
+    limit,
+  }
+}
 
-  if (!allowedStatuses.has(nextStatus)) {
+const getFilterOptions = async () => {
+  const [ownersRows, tagsRows, genresRows] = await Promise.all([
+    sql`SELECT DISTINCT owner FROM artists ORDER BY owner`,
+    sql`
+      SELECT tag, COUNT(*)::INT AS count
+      FROM artists, unnest(tags) AS tag
+      GROUP BY tag
+      ORDER BY count DESC, tag
+      LIMIT 80
+    `,
+    sql`
+      SELECT DISTINCT genre
+      FROM artists, unnest(genres) AS genre
+      ORDER BY genre
+    `,
+  ])
+
+  return {
+    owners: ownersRows.map((row) => row.owner),
+    tags: tagsRows.map((row) => [row.tag, row.count]),
+    genres: genresRows.map((row) => row.genre),
+  }
+}
+
+const updateArtist = async (id, patch, operator) => {
+  const effectivePatch = withOperatorOwner(patch, operator)
+  const nextStatus = effectivePatch.status
+
+  if (nextStatus !== undefined && !allowedStatuses.has(nextStatus)) {
     throw new Error('Invalid status')
   }
 
-  const nameHe = effectivePatch.nameHe ?? current.name_he
-  const nameEn = effectivePatch.nameEn ?? current.name_en
   const genres =
-    effectivePatch.genres !== undefined ? parseTagList(effectivePatch.genres) : current.genres
-  const tags = effectivePatch.tags !== undefined ? parseTagList(effectivePatch.tags) : current.tags
+    effectivePatch.genres !== undefined ? parseTagList(effectivePatch.genres) : undefined
+  const tags = effectivePatch.tags !== undefined ? parseTagList(effectivePatch.tags) : undefined
 
   const [updated] = await sql`
     UPDATE artists
     SET
-      name_he = ${nameHe},
-      name_en = ${nameEn},
-      genres = ${genres},
-      tags = ${tags},
-      latest_album = ${effectivePatch.latestAlbum ?? current.latest_album},
-      status = ${nextStatus},
-      owner = ${effectivePatch.owner ?? current.owner},
-      source = ${effectivePatch.source ?? current.source},
-      notes = ${effectivePatch.notes ?? current.notes},
-      priority = ${effectivePatch.priority ?? current.priority},
-      updated_at = NOW()
+      name_he = COALESCE(${effectivePatch.nameHe ?? null}, name_he),
+      name_en = COALESCE(${effectivePatch.nameEn ?? null}, name_en),
+      genres = COALESCE(${genres ?? null}, genres),
+      tags = COALESCE(${tags ?? null}, tags),
+      latest_album = COALESCE(${effectivePatch.latestAlbum ?? null}, latest_album),
+      status = COALESCE(${nextStatus ?? null}, status),
+      owner = COALESCE(${effectivePatch.owner ?? null}, owner),
+      source = COALESCE(${effectivePatch.source ?? null}, source),
+      notes = COALESCE(${effectivePatch.notes ?? null}, notes),
+      priority = COALESCE(${effectivePatch.priority ?? null}, priority),
+      updated_at = NOW(),
+      updated_by = COALESCE(${operator ?? null}, updated_by)
     WHERE id = ${id}
     RETURNING *
   `
+
+  if (!updated) {
+    return null
+  }
 
   return normalizeArtist(updated)
 }
@@ -293,7 +558,8 @@ const createArtist = async (payload, operator) => {
       owner,
       source,
       notes,
-      priority
+      priority,
+      updated_by
     )
     VALUES (
       ${id},
@@ -303,10 +569,11 @@ const createArtist = async (payload, operator) => {
       ${tags},
       ${String(effectivePayload.latestAlbum ?? '').trim()},
       ${status},
-      ${effectivePayload.owner ?? 'לא שויך'},
+      ${effectivePayload.owner ?? UNASSIGNED_OWNER},
       ${String(effectivePayload.source ?? '').trim()},
       ${String(effectivePayload.notes ?? '').trim()},
-      ${effectivePayload.priority ?? (status === 'signed' ? 'שימור קשר' : status === 'stuck' ? 'פתיחת חסם' : 'ליצירת קשר')}
+      ${effectivePayload.priority ?? (status === 'signed' ? 'שימור קשר' : status === 'stuck' ? 'פתיחת חסם' : 'ליצירת קשר')},
+      ${operator ?? ''}
     )
     RETURNING *
   `
@@ -324,6 +591,10 @@ const bulkDeleteArtists = async (ids) => {
     return []
   }
 
+  if (ids.length > 1000) {
+    throw new Error('Too many artists selected for bulk delete')
+  }
+
   const rows = await sql`DELETE FROM artists WHERE id = ANY(${ids}) RETURNING id`
   return rows.map((row) => row.id)
 }
@@ -332,6 +603,10 @@ const bulkUpdateArtists = async ({ ids, status, owner, priority }, operator) => 
   const effectiveOwner = owner ?? operator
   if (!Array.isArray(ids) || ids.length === 0) {
     return []
+  }
+
+  if (ids.length > 1000) {
+    throw new Error('Too many artists selected for bulk update')
   }
 
   if (!allowedStatuses.has(status)) {
@@ -344,7 +619,8 @@ const bulkUpdateArtists = async ({ ids, status, owner, priority }, operator) => 
       status = ${status},
       owner = ${effectiveOwner},
       priority = ${priority},
-      updated_at = NOW()
+      updated_at = NOW(),
+      updated_by = COALESCE(${operator ?? null}, updated_by)
     WHERE id = ANY(${ids})
     RETURNING *
   `
@@ -424,19 +700,25 @@ const getBackupPayload = async () => {
   }
 }
 
+const { verifyGateUnlock } = require('./gate.cjs')
+
 module.exports = {
   bulkDeleteArtists,
   bulkUpdateArtists,
   createArtist,
   deleteArtist,
   getAccessByIp,
+  getArtistById,
+  getFilterOptions,
   getOperatorNameByIp,
   getArtists,
   getBackupPayload,
   getStats,
   registerOperatorForIp,
+  searchArtists,
   setupDatabase,
   unlockGateForIp,
   updateArtist,
   upsertArtists,
+  verifyGateUnlock,
 }

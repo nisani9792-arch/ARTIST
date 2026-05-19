@@ -13,4 +13,5 @@ export type ArtistRecord = {
   notes: string
   priority: string
   updatedAt?: string
+  updatedBy?: string
 }

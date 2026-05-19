@@ -1,44 +1,41 @@
 import { Fingerprint, Lock } from 'lucide-react'
 import { useRef, useState } from 'react'
 import { useBiometricUnlock } from '../hooks/useBiometricUnlock'
+import type { UnlockMethod } from '../api/access'
 import './LockScreen.css'
 
-const GATE_CODE = 'JUSIC'
-
 type LockScreenProps = {
-  onUnlock: () => void | Promise<void>
+  onUnlock: (options?: { method?: UnlockMethod; secret?: string }) => Promise<void>
 }
 
 export const LockScreen = ({ onUnlock }: LockScreenProps) => {
   const [password, setPassword] = useState('')
   const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
   const unlockStarted = useRef(false)
-  const { available: biometricAvailable, busy: biometricBusy, unlock: unlockWithBiometric } =
-    useBiometricUnlock(onUnlock)
 
-  const tryUnlockWithCode = async (value: string) => {
+  const tryUnlock = async (options: { method: UnlockMethod; secret?: string }) => {
     if (unlockStarted.current) return
-    if (value.trim().toUpperCase() !== GATE_CODE) return
 
     unlockStarted.current = true
     setBusy(true)
+    setError('')
     try {
-      await onUnlock()
+      await onUnlock(options)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'פתיחת השער נכשלה')
+      unlockStarted.current = false
     } finally {
       setBusy(false)
     }
   }
 
+  const { available: biometricAvailable, busy: biometricBusy, unlock: unlockWithBiometric } =
+    useBiometricUnlock(() => tryUnlock({ method: 'biometric' }))
+
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault()
-    void tryUnlockWithCode(password)
-  }
-
-  const handlePasswordChange = (value: string) => {
-    setPassword(value)
-    if (value.trim().toUpperCase() === GATE_CODE) {
-      void tryUnlockWithCode(value)
-    }
+    void tryUnlock({ method: 'password', secret: password })
   }
 
   return (
@@ -60,12 +57,14 @@ export const LockScreen = ({ onUnlock }: LockScreenProps) => {
             autoComplete="off"
             maxLength={20}
             value={password}
-            onChange={(event) => handlePasswordChange(event.target.value)}
+            onChange={(event) => setPassword(event.target.value)}
             placeholder="••••••••••••••••••••"
             aria-label="סיסמא"
             disabled={busy}
           />
         </form>
+
+        {error && <p className="lock-error">{error}</p>}
 
         {biometricAvailable && (
           <button

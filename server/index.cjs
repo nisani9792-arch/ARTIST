@@ -3,21 +3,26 @@ require('dotenv').config()
 const express = require('express')
 const path = require('node:path')
 const zlib = require('node:zlib')
+const rateLimit = require('express-rate-limit')
 const {
   bulkDeleteArtists,
   bulkUpdateArtists,
   createArtist,
   deleteArtist,
   getAccessByIp,
+  getArtistById,
   getArtists,
   getBackupPayload,
-  getOperatorNameByIp,
+  getFilterOptions,
   getStats,
   registerOperatorForIp,
+  searchArtists,
   setupDatabase,
   unlockGateForIp,
   updateArtist,
+  verifyGateUnlock,
 } = require('./db.cjs')
+const { createRequireAccess } = require('./middleware/requireAccess.cjs')
 
 const app = express()
 app.set('trust proxy', true)
@@ -64,7 +69,28 @@ const getClientIp = (req) => {
   return req.socket?.remoteAddress || req.ip || 'unknown'
 }
 
-const resolveOperator = (req) => getOperatorNameByIp(getClientIp(req))
+const { requireAccess, requireGateUnlocked } = createRequireAccess(getClientIp)
+
+const unlockLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many unlock attempts' },
+})
+
+const parseSearchQuery = (req) => ({
+  q: req.query.q ?? '',
+  status: req.query.status ?? 'all',
+  owner: req.query.owner ?? 'all',
+  tag: req.query.tag ?? 'all',
+  genre: req.query.genre ?? 'all',
+  needsAction: req.query.needsAction === 'true' || req.query.needsAction === '1',
+  myQueue: req.query.myQueue === 'true' || req.query.myQueue === '1',
+  sort: req.query.sort ?? 'smart',
+  page: req.query.page ?? 1,
+  limit: req.query.limit ?? 48,
+})
 
 app.get('/api/access/me', async (req, res, next) => {
   try {
@@ -75,16 +101,21 @@ app.get('/api/access/me', async (req, res, next) => {
   }
 })
 
-app.post('/api/access/unlock', async (req, res, next) => {
+app.post('/api/access/unlock', unlockLimiter, async (req, res, next) => {
   try {
+    verifyGateUnlock(req.body ?? {})
     const access = await unlockGateForIp(getClientIp(req))
     res.json({ access })
   } catch (error) {
+    if (error.message === 'Invalid gate secret') {
+      res.status(401).json({ error: 'Invalid gate secret' })
+      return
+    }
     next(error)
   }
 })
 
-app.post('/api/access/register', async (req, res, next) => {
+app.post('/api/access/register', requireGateUnlocked, async (req, res, next) => {
   try {
     const access = await registerOperatorForIp(getClientIp(req), req.body?.displayName)
     res.json({ access })
@@ -102,74 +133,38 @@ app.get('/api/health', async (_req, res, next) => {
   }
 })
 
-app.get('/api/artists', async (_req, res, next) => {
+app.get('/api/artists', requireAccess, async (req, res, next) => {
   try {
-    const artists = await getArtists()
-    res.setHeader('Cache-Control', 'private, no-cache')
-    res.json({ artists })
-  } catch (error) {
-    next(error)
-  }
-})
-
-app.get('/api/bootstrap', async (req, res, next) => {
-  try {
-    const ip = getClientIp(req)
-    const access = await getAccessByIp(ip)
-
-    if (!access.gateUnlocked) {
-      res.status(403).json({ error: 'Gate is locked' })
-      return
+    const params = parseSearchQuery(req)
+    if (params.myQueue) {
+      params.operatorName = req.operatorName
     }
 
-    if (!access.displayName) {
-      res.status(403).json({ error: 'Operator registration required' })
-      return
-    }
-
-    const [artists, stats] = await Promise.all([getArtists(), getStats()])
+    const [result, stats, filters] = await Promise.all([
+      searchArtists(params),
+      getStats(),
+      getFilterOptions(),
+    ])
     res.setHeader('Cache-Control', 'private, no-cache')
-    res.json({ access, artists, stats })
+    res.json({ ...result, stats, filters })
   } catch (error) {
     next(error)
   }
 })
 
-app.get('/api/backup', async (_req, res, next) => {
+app.get('/api/artists/filters', requireAccess, async (_req, res, next) => {
   try {
-    const backup = await getBackupPayload()
-    const stamp = backup.exportedAt.slice(0, 19).replace(/[:T]/g, '-')
-    res.setHeader('Content-Type', 'application/json; charset=utf-8')
-    res.setHeader('Content-Disposition', `attachment; filename="artist-backup-${stamp}.json"`)
-    res.json(backup)
+    const filters = await getFilterOptions()
+    res.setHeader('Cache-Control', 'private, no-cache')
+    res.json(filters)
   } catch (error) {
     next(error)
   }
 })
 
-app.get('/api/stats', async (_req, res, next) => {
+app.get('/api/artists/:id', requireAccess, async (req, res, next) => {
   try {
-    const stats = await getStats()
-    res.json({ stats })
-  } catch (error) {
-    next(error)
-  }
-})
-
-app.post('/api/artists', async (req, res, next) => {
-  try {
-    const operator = await resolveOperator(req)
-    const artist = await createArtist(req.body ?? {}, operator)
-    res.status(201).json({ artist })
-  } catch (error) {
-    next(error)
-  }
-})
-
-app.patch('/api/artists/:id', async (req, res, next) => {
-  try {
-    const operator = await resolveOperator(req)
-    const artist = await updateArtist(req.params.id, req.body ?? {}, operator)
+    const artist = await getArtistById(req.params.id)
 
     if (!artist) {
       res.status(404).json({ error: 'Artist not found' })
@@ -182,17 +177,89 @@ app.patch('/api/artists/:id', async (req, res, next) => {
   }
 })
 
-app.post('/api/artists/bulk', async (req, res, next) => {
+app.get('/api/bootstrap', requireAccess, async (req, res, next) => {
   try {
-    const operator = await resolveOperator(req)
-    const artists = await bulkUpdateArtists(req.body ?? {}, operator)
+    const params = parseSearchQuery(req)
+    params.operatorName = req.operatorName
+    params.page = req.query.page ?? 1
+    params.limit = req.query.limit ?? 48
+
+    const [result, stats, filters] = await Promise.all([
+      searchArtists(params),
+      getStats(),
+      getFilterOptions(),
+    ])
+
+    res.setHeader('Cache-Control', 'private, no-cache')
+    res.json({
+      access: req.access,
+      artists: result.artists,
+      total: result.total,
+      page: result.page,
+      limit: result.limit,
+      stats,
+      filters,
+    })
+  } catch (error) {
+    next(error)
+  }
+})
+
+app.get('/api/backup', requireAccess, async (_req, res, next) => {
+  try {
+    const backup = await getBackupPayload()
+    const stamp = backup.exportedAt.slice(0, 19).replace(/[:T]/g, '-')
+    res.setHeader('Content-Type', 'application/json; charset=utf-8')
+    res.setHeader('Content-Disposition', `attachment; filename="artist-backup-${stamp}.json"`)
+    res.json(backup)
+  } catch (error) {
+    next(error)
+  }
+})
+
+app.get('/api/stats', requireAccess, async (_req, res, next) => {
+  try {
+    const stats = await getStats()
+    res.json({ stats })
+  } catch (error) {
+    next(error)
+  }
+})
+
+app.post('/api/artists', requireAccess, async (req, res, next) => {
+  try {
+    const artist = await createArtist(req.body ?? {}, req.operatorName)
+    res.status(201).json({ artist })
+  } catch (error) {
+    next(error)
+  }
+})
+
+app.patch('/api/artists/:id', requireAccess, async (req, res, next) => {
+  try {
+    const artist = await updateArtist(req.params.id, req.body ?? {}, req.operatorName)
+
+    if (!artist) {
+      res.status(404).json({ error: 'Artist not found' })
+      return
+    }
+
+    res.json({ artist })
+  } catch (error) {
+    next(error)
+  }
+})
+
+app.post('/api/artists/bulk', requireAccess, async (req, res, next) => {
+  try {
+    const artists = await bulkUpdateArtists(req.body ?? {}, req.operatorName)
     res.json({ artists })
   } catch (error) {
     next(error)
   }
 })
 
-app.post('/api/artists/bulk-delete', async (req, res, next) => {
+app.post('/api/artists/bulk-delete', requireAccess, async (req, res, next) => {
   try {
     const ids = await bulkDeleteArtists(req.body?.ids ?? [])
     res.json({ ids })
@@ -201,7 +268,7 @@ app.post('/api/artists/bulk-delete', async (req, res, next) => {
   }
 })
 
-app.delete('/api/artists/:id', async (req, res, next) => {
+app.delete('/api/artists/:id', requireAccess, async (req, res, next) => {
   try {
     const deleted = await deleteArtist(req.params.id)
 
@@ -224,7 +291,9 @@ app.get(/.*/, (_req, res) => {
 
 app.use((error, _req, res, _next) => {
   console.error(error)
-  res.status(500).json({ error: error.message || 'Server error' })
+  const message =
+    process.env.NODE_ENV === 'production' ? 'Server error' : error.message || 'Server error'
+  res.status(500).json({ error: message })
 })
 
 setupDatabase()

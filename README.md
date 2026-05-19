@@ -5,19 +5,22 @@
 ## מה יש במערכת
 
 - ממשק מלא בעברית ובכיוון RTL.
-- כרטיסיות אומנים עם נורית חיווי: ירוק לחתום, אדום ללא חתום, צהוב לתקוע.
-- חיפוש לפי שם, שם באנגלית, תגיות, ז׳אנרים, אלבום, גורם מטפל והערות.
-- סינון מתקדם לפי סטטוס, גורם מטפל, תגית, ז׳אנר ופעולות נדרשות.
-- טיפול מרוכז בכמה אומנים יחד: שינוי סטטוס וגורם מטפל.
-- שמירת שינויים בדפדפן באמצעות Local Storage.
-- ייצוא CSV של התוצאות המסוננות.
-- תמיכת PWA להתקנה בטלפון בשם ARTIST.
+- דשבורד עם סיכום, קיצורי דרך ו"העבודה שלי".
+- כרטיסיות, טבלה ולוח Kanban לניהול סטטוס חתימה.
+- חיפוש וסינון בשרת (pagination) — מהיר גם עם אלפי אומנים.
+- טיפול מרוכז: שינוי סטטוס וגורם מטפל.
+- שמירה אוטומטית ב-Neon PostgreSQL.
+- ייצוא CSV (גם בנייד) וגיבוי JSON.
+- PWA להתקנה בטלפון בשם ARTIST.
+- שער גישה לפי IP + שם מפעיל (סיסמה נבדקת בשרver).
 
-## הרצה
+## הרצה מקומית
 
 ```bash
 npm install
-npm run import:artists
+npm run db:init
+npm run db:seed
+npm run dev:server
 npm run dev
 ```
 
@@ -25,13 +28,30 @@ npm run dev
 
 ```bash
 npm run build
+npm run start
 ```
 
-## ייבוא נתונים
+## ייבוא נתונים מאקסל
 
-הנתונים נוצרים מתוך קבצי האקסל:
+```bash
+npm run import:artists
+npm run db:seed
+```
 
-- `C:\Users\SHIMON YOHAY NISANI\Downloads\חתומים.xlsx`
-- `C:\Users\SHIMON YOHAY NISANI\Downloads\לא חתומים.xlsx`
+הסקריפט קורא את קבצי האקסל (ראה `scripts/read-source-artists.cjs`) ומייצר `data/seed/artists.json`.
 
-הסקריפט מאחד שורות המשך עם תגיות לתוך כרטיס האומן האחרון, ומייצר את `src/data/artists.ts`.
+## משתני סביבה
+
+ראה `.env.example`:
+
+- `DATABASE_URL` — חיבור Neon
+- `GATE_SECRET` — סיסמת שער (לא בקוד!)
+- `GATE_ALLOW_SHORTCUT` — אפשר רווח×3
+- `GATE_ALLOW_BIOMETRIC` — אפשר ביומטרי
+
+## בדיקות
+
+```bash
+npm run test
+npm run test:e2e
+```

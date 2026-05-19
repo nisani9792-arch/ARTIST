@@ -86,6 +86,7 @@ export const ArtistDetailPanel = ({
               <span>עודכן לאחרונה</span>
               <p className="detail-muted">
                 {new Date(artist.updatedAt).toLocaleString('he-IL')}
+                {artist.updatedBy ? ` · ${artist.updatedBy}` : ''}
               </p>
             </div>
           )}
