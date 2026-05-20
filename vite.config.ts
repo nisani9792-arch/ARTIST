@@ -28,11 +28,11 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['icon-192.png', 'icon-512.png'],
+      includeAssets: ['icon-192.png', 'icon-512.png', 'jusic-artist-logo.png'],
       manifest: {
-        name: 'JUSIC',
-        short_name: 'JUSIC',
-        description: 'מערכת CRM פרימיום לניהול אומנים חתומים ולא חתומים',
+        name: 'JUSIC ARTIST',
+        short_name: 'JUSIC ARTIST',
+        description: 'JUSIC ARTIST — מערכת CRM פרימיום לניהול אומנים חתומים ולא חתומים',
         lang: 'he-IL',
         dir: 'rtl',
         theme_color: '#f5f3ff',

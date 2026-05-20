@@ -56,11 +56,11 @@ export const useBiometricUnlock = (onSuccess: () => void) => {
     const credential = (await navigator.credentials.create({
       publicKey: {
         challenge: crypto.getRandomValues(new Uint8Array(32)),
-        rp: { name: 'ARTIST', id: window.location.hostname },
+        rp: { name: 'JUSIC ARTIST', id: window.location.hostname },
         user: {
           id: crypto.getRandomValues(new Uint8Array(16)),
-          name: 'artist',
-          displayName: 'ARTIST',
+          name: 'jusic-artist',
+          displayName: 'JUSIC ARTIST',
         },
         pubKeyCredParams: [{ alg: -7, type: 'public-key' }],
         authenticatorSelection: {

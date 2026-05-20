@@ -5,7 +5,7 @@
 }
 
 :root {
-  /* Premium JUSIC palette — soft mesh, Gemini-inspired */
+  /* Premium JUSIC ARTIST palette — soft mesh, Gemini-inspired */
   --text: #5c6378;
   --text-strong: #15182a;
   --muted: #8b92a8;
@@ -98,5 +98,6 @@ p {
 
 .jusic-logo {
   flex-shrink: 0;
-  filter: drop-shadow(0 0 12px rgba(124, 141, 255, 0.25));
+  object-fit: contain;
+  border-radius: 10px;
 }

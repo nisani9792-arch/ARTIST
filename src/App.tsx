@@ -2,6 +2,7 @@ import { motion } from 'framer-motion'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import './App.css'
 import './components/LockScreen.css'
+import { APP_NAME } from './lib/branding'
 import { JusicLogo } from './components/JusicLogo'
 import { LockScreen } from './components/LockScreen'
 import { OperatorRegistration } from './components/OperatorRegistration'
@@ -32,7 +33,7 @@ function App() {
             <span />
             <span />
           </div>
-          <p className="lock-prompt">טוען את JUSIC...</p>
+          <p className="lock-prompt">טוען את {APP_NAME}...</p>
         </motion.div>
       </div>
     )

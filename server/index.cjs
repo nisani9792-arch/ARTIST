@@ -127,7 +127,7 @@ app.post('/api/access/register', requireGateUnlocked, async (req, res, next) => 
 app.get('/api/health', async (_req, res, next) => {
   try {
     await setupDatabase()
-    res.json({ ok: true, service: 'ARTIST CRM', database: 'neon' })
+    res.json({ ok: true, service: 'JUSIC ARTIST CRM', database: 'neon' })
   } catch (error) {
     next(error)
   }
@@ -299,10 +299,10 @@ app.use((error, _req, res, _next) => {
 setupDatabase()
   .then(() => {
     app.listen(port, () => {
-      console.log(`ARTIST CRM server running at http://localhost:${port}`)
+      console.log(`JUSIC ARTIST CRM server running at http://localhost:${port}`)
     })
   })
   .catch((error) => {
-    console.error('Failed to start ARTIST CRM server', error)
+    console.error('Failed to start JUSIC ARTIST CRM server', error)
     process.exit(1)
   })

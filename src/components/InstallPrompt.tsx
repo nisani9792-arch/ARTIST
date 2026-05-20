@@ -1,4 +1,5 @@
 import { Download, Share, X } from 'lucide-react'
+import { APP_NAME } from '../lib/branding'
 import { usePwaInstall } from '../hooks/usePwaInstall'
 import './InstallPrompt.css'
 
@@ -12,7 +13,7 @@ export const InstallPrompt = () => {
   return (
     <aside className="install-banner" aria-label="התקנת אפליקציה">
       <div className="install-banner-text">
-        <strong>התקן את JUSIC בנייד</strong>
+        <strong>התקן את {APP_NAME} בנייד</strong>
         {isIos ? (
           <p>
             ב-Safari: לחץ <Share size={14} className="inline-icon" /> שיתוף → «הוסף למסך הבית»

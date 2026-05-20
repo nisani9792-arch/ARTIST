@@ -1,5 +1,6 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { Database, Download, LayoutGrid, Plus, RefreshCw, Table2, Columns3 } from 'lucide-react'
+import { APP_NAME } from '../lib/branding'
 import { JusicLogo } from './JusicLogo'
 import { InstallPrompt } from './InstallPrompt'
 import { MobileBottomBar } from './MobileBottomBar'
@@ -95,7 +96,7 @@ export const AppShell = ({
         <div className="brand">
           <Link to="/" className="brand-link">
             <JusicLogo size={36} variant="mark" />
-            <span className="brand-title">JUSIC</span>
+            <span className="brand-title">{APP_NAME}</span>
           </Link>
           <span className="operator-badge" title="גורם מטפל מחובר">
             {operatorName}

@@ -693,7 +693,7 @@ const getBackupPayload = async () => {
   return {
     version: 1,
     exportedAt: new Date().toISOString(),
-    service: 'ARTIST CRM',
+    service: 'JUSIC ARTIST CRM',
     stats,
     count: artists.length,
     artists,

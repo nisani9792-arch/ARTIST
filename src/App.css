@@ -50,9 +50,9 @@
 }
 
 .brand-title {
-  font-size: 17px;
+  font-size: 15px;
   font-weight: 800;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.04em;
   background: linear-gradient(135deg, var(--accent-strong) 0%, var(--accent-mid) 50%, #5ec8f0 100%);
   -webkit-background-clip: text;
   background-clip: text;
