@@ -12,7 +12,7 @@ export const InstallPrompt = () => {
   return (
     <aside className="install-banner" aria-label="התקנת אפליקציה">
       <div className="install-banner-text">
-        <strong>התקן את ARTIST בנייד</strong>
+        <strong>התקן את JUSIC בנייד</strong>
         {isIos ? (
           <p>
             ב-Safari: לחץ <Share size={14} className="inline-icon" /> שיתוף → «הוסף למסך הבית»

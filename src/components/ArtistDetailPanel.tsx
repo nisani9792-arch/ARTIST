@@ -1,7 +1,10 @@
+import { AnimatePresence } from 'framer-motion'
 import { Pencil, Trash2, X } from 'lucide-react'
 import { useEffect } from 'react'
 import type { SignatureStatus } from '../data/types'
 import type { CrmArtist } from '../types'
+import { MotionBackdrop } from './motion/MotionBackdrop'
+import { MotionPanel } from './motion/MotionPanel'
 
 type StatusMeta = Record<SignatureStatus, { label: string; tone: string }>
 
@@ -33,9 +36,9 @@ export const ArtistDetailPanel = ({
   }, [onClose])
 
   return (
-    <>
-      <button className="panel-backdrop" type="button" aria-label="סגור" onClick={onClose} />
-      <aside className="detail-panel" aria-label={`פרטי ${displayName}`}>
+    <AnimatePresence>
+      <MotionBackdrop key="detail-backdrop" onClick={onClose} />
+      <MotionPanel key="detail-panel" aria-label={`פרטי ${displayName}`}>
         <header className="detail-header">
           <div>
             <span className={`badge ${meta.tone}`}>{meta.label}</span>
@@ -97,16 +100,12 @@ export const ArtistDetailPanel = ({
             <Pencil size={14} />
             ערוך
           </button>
-          <button
-            className="btn btn-danger"
-            type="button"
-            onClick={() => onDelete(artist)}
-          >
+          <button className="btn btn-danger" type="button" onClick={() => onDelete(artist)}>
             <Trash2 size={14} />
             מחק
           </button>
         </footer>
-      </aside>
-    </>
+      </MotionPanel>
+    </AnimatePresence>
   )
 }

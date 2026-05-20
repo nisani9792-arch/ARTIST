@@ -1,5 +1,7 @@
+import { motion } from 'framer-motion'
 import { User } from 'lucide-react'
 import { useState } from 'react'
+import { JusicLogo } from './JusicLogo'
 import './LockScreen.css'
 import './OperatorRegistration.css'
 
@@ -39,8 +41,15 @@ export const OperatorRegistration = ({ onRegister, error, defaultName }: Operato
 
   return (
     <div className="lock-screen operator-screen" role="dialog" aria-modal="true" aria-label="רישום משתמש">
-      <div className="lock-card operator-card">
-        <img src="/artist-logo.png" className="lock-logo" alt="ARTIST" width={72} height={72} />
+      <motion.div
+        className="lock-card operator-card"
+        initial={{ opacity: 0, y: 24, scale: 0.94 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ type: 'spring', stiffness: 340, damping: 30 }}
+      >
+        <div className="lock-logo-wrap">
+          <JusicLogo size={64} variant="mark" />
+        </div>
 
         <div className="lock-icon-wrap" aria-hidden>
           <User size={28} strokeWidth={2} />
@@ -69,7 +78,7 @@ export const OperatorRegistration = ({ onRegister, error, defaultName }: Operato
             {busy ? 'שומר...' : 'המשך למערכת'}
           </button>
         </form>
-      </div>
+      </motion.div>
     </div>
   )
 }

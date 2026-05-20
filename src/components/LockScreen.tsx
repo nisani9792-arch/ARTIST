@@ -1,7 +1,9 @@
+import { motion } from 'framer-motion'
 import { Fingerprint, Lock } from 'lucide-react'
 import { useRef, useState } from 'react'
 import { useBiometricUnlock } from '../hooks/useBiometricUnlock'
 import type { UnlockMethod } from '../api/access'
+import { JusicLogo } from './JusicLogo'
 import './LockScreen.css'
 
 type LockScreenProps = {
@@ -40,8 +42,15 @@ export const LockScreen = ({ onUnlock }: LockScreenProps) => {
 
   return (
     <div className="lock-screen" role="dialog" aria-modal="true" aria-label="מסך כניסה">
-      <div className="lock-card">
-        <img src="/artist-logo.png" className="lock-logo" alt="ARTIST" width={88} height={88} />
+      <motion.div
+        className="lock-card"
+        initial={{ opacity: 0, y: 24, scale: 0.94 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ type: 'spring', stiffness: 340, damping: 30 }}
+      >
+        <div className="lock-logo-wrap">
+          <JusicLogo size={72} variant="mark" />
+        </div>
 
         <div className="lock-icon-wrap" aria-hidden>
           <Lock size={28} strokeWidth={2} />
@@ -81,7 +90,7 @@ export const LockScreen = ({ onUnlock }: LockScreenProps) => {
             </span>
           </button>
         )}
-      </div>
+      </motion.div>
     </div>
   )
 }

@@ -1,5 +1,6 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { Database, Download, LayoutGrid, Plus, RefreshCw, Table2, Columns3 } from 'lucide-react'
+import { JusicLogo } from './JusicLogo'
 import { InstallPrompt } from './InstallPrompt'
 import { MobileBottomBar } from './MobileBottomBar'
 import { ToastStack } from '../contexts/ToastProvider'
@@ -93,8 +94,8 @@ export const AppShell = ({
       <header className="app-header">
         <div className="brand">
           <Link to="/" className="brand-link">
-            <img src="/artist-logo.png" className="brand-logo" alt="ARTIST" width={32} height={32} />
-            <span className="brand-title">ARTIST</span>
+            <JusicLogo size={36} variant="mark" />
+            <span className="brand-title">JUSIC</span>
           </Link>
           <span className="operator-badge" title="גורם מטפל מחובר">
             {operatorName}

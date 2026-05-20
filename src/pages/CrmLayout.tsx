@@ -1,5 +1,7 @@
+import { AnimatePresence } from 'framer-motion'
 import { useCallback, useMemo, useState } from 'react'
-import { Outlet } from 'react-router-dom'
+import { Outlet, useLocation } from 'react-router-dom'
+import { PageTransition } from '../components/motion/PageTransition'
 import { AppShell } from '../components/AppShell'
 import { useArtistStats } from '../features/artists/useArtistsQuery'
 import type { HeaderStats } from '../api/artists'
@@ -29,6 +31,7 @@ type CrmLayoutProps = {
 }
 
 export const CrmLayout = ({ operatorName }: CrmLayoutProps) => {
+  const location = useLocation()
   const { data: statsData, refetch } = useArtistStats()
   const [artistsUi, setArtistsUiState] = useState<ArtistsUiState | null>(null)
   const [pageStats, setPageStats] = useState<HeaderStats | undefined>()
@@ -78,7 +81,11 @@ export const CrmLayout = ({ operatorName }: CrmLayoutProps) => {
       onSetView={artistsUi?.setViewMode}
       onToggleSearch={() => artistsUi?.setSearchOpen(!(artistsUi?.searchOpen ?? false))}
     >
-      <Outlet context={outletContext} />
+      <AnimatePresence mode="wait">
+        <PageTransition key={location.pathname}>
+          <Outlet context={outletContext} />
+        </PageTransition>
+      </AnimatePresence>
     </AppShell>
   )
 }

@@ -1,3 +1,4 @@
+import { AnimatePresence } from 'framer-motion'
 import { ChevronLeft, ChevronRight, SlidersHorizontal } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useOutletContext } from 'react-router-dom'
@@ -350,6 +351,7 @@ export const ArtistsPage = () => {
         </footer>
       )}
 
+      <AnimatePresence>
       {formMode && (
         <ArtistFormModal
           mode={formMode}
@@ -374,6 +376,7 @@ export const ArtistsPage = () => {
           }}
         />
       )}
+      </AnimatePresence>
 
       <button type="button" className="sr-only" onClick={() => void refetch()} aria-hidden />
     </>

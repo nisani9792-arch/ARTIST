@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
 // https://vite.dev/config/
@@ -12,6 +13,7 @@ export default defineConfig({
           if (id.includes('node_modules/react-dom')) return 'react-dom'
           if (id.includes('node_modules/react/')) return 'react'
           if (id.includes('node_modules/lucide-react')) return 'icons'
+          if (id.includes('node_modules/framer-motion')) return 'motion'
         },
       },
     },
@@ -23,17 +25,18 @@ export default defineConfig({
   },
   plugins: [
     react(),
+    tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['artist-logo.png', 'icon-192.png', 'icon-512.png'],
+      includeAssets: ['icon-192.png', 'icon-512.png'],
       manifest: {
-        name: 'ARTIST',
-        short_name: 'ARTIST',
-        description: 'מערכת CRM חכמה לניהול אומנים חתומים ולא חתומים',
+        name: 'JUSIC',
+        short_name: 'JUSIC',
+        description: 'מערכת CRM פרימיום לניהול אומנים חתומים ולא חתומים',
         lang: 'he-IL',
         dir: 'rtl',
-        theme_color: '#f4f7f9',
-        background_color: '#f4f7f9',
+        theme_color: '#f5f3ff',
+        background_color: '#f5f3ff',
         display: 'standalone',
         orientation: 'portrait',
         categories: ['business', 'productivity'],

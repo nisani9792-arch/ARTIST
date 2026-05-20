@@ -1,3 +1,4 @@
+import { AnimatePresence } from 'framer-motion'
 import { X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import type { SignatureStatus } from '../data/types'
@@ -8,6 +9,8 @@ import {
   type ArtistFormValues,
 } from '../utils/artistForm'
 import type { CrmArtist } from '../types'
+import { MotionBackdrop } from './motion/MotionBackdrop'
+import { MotionModal } from './motion/MotionModal'
 
 type ArtistFormModalProps = {
   mode: 'create' | 'edit'
@@ -67,9 +70,9 @@ export const ArtistFormModal = ({
   }
 
   return (
-    <>
-      <button className="panel-backdrop" type="button" aria-label="סגור" onClick={onClose} />
-      <dialog className="form-modal" open aria-labelledby="artist-form-title">
+    <AnimatePresence>
+      <MotionBackdrop key="form-backdrop" onClick={onClose} />
+      <MotionModal key="form-modal" aria-labelledby="artist-form-title">
         <header className="form-modal-header">
           <h2 id="artist-form-title">{mode === 'create' ? 'אומן חדש' : 'עריכת אומן'}</h2>
           <button className="btn btn-icon" type="button" onClick={onClose} aria-label="סגור">
@@ -159,7 +162,7 @@ export const ArtistFormModal = ({
             </button>
           </footer>
         </form>
-      </dialog>
-    </>
+      </MotionModal>
+    </AnimatePresence>
   )
 }

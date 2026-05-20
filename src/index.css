@@ -1,32 +1,48 @@
+@import 'tailwindcss';
+
+@theme {
+  --font-sans: 'Plus Jakarta Sans', 'Segoe UI', Assistant, Rubik, system-ui, sans-serif;
+}
+
 :root {
-  --text: #5c6b75;
-  --text-strong: #0f1720;
-  --muted: #8a97a1;
-  --bg: #f4f7f9;
-  --surface: #ffffff;
-  --surface-2: #f8fafb;
-  --border: #e2e8ee;
-  --border-strong: #cbd5e1;
-  --accent: #2bdae5;
-  --accent-strong: #12a8b3;
-  --accent-soft: rgba(43, 218, 229, 0.12);
+  /* Premium JUSIC palette — soft mesh, Gemini-inspired */
+  --text: #5c6378;
+  --text-strong: #15182a;
+  --muted: #8b92a8;
+  --bg: #f3f1ff;
+  --bg-mesh-1: #e8e4ff;
+  --bg-mesh-2: #fce8f3;
+  --bg-mesh-3: #e0f4ff;
+  --surface: rgba(255, 255, 255, 0.72);
+  --surface-solid: #ffffff;
+  --surface-2: rgba(255, 255, 255, 0.52);
+  --border: rgba(139, 157, 255, 0.18);
+  --border-strong: rgba(124, 140, 255, 0.32);
+  --accent: #7c8dff;
+  --accent-mid: #a78bfa;
+  --accent-strong: #5b6fd6;
+  --accent-soft: rgba(124, 141, 255, 0.14);
+  --accent-glow: 0 0 28px rgba(124, 141, 255, 0.22);
   --green: #0d9f6e;
   --green-soft: rgba(13, 159, 110, 0.1);
-  --red: #dc4c4c;
-  --red-soft: rgba(220, 76, 76, 0.1);
+  --red: #e25555;
+  --red-soft: rgba(226, 85, 85, 0.1);
   --yellow: #c98a08;
-  --yellow-soft: rgba(201, 138, 8, 0.12);
-  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.05);
-  --shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
-  --radius: 8px;
-  --radius-lg: 12px;
-  --header-h: 52px;
-  --toolbar-h: 44px;
-  --row-h: 40px;
+  --yellow-soft: rgba(201, 138, 8, 0.1);
+  --glow-sm: 0 0 16px rgba(124, 141, 255, 0.12);
+  --glow-md: 0 0 32px rgba(167, 139, 250, 0.18);
+  --glow-accent: 0 0 24px rgba(124, 141, 255, 0.28);
+  --radius: 12px;
+  --radius-lg: 18px;
+  --radius-xl: 24px;
+  --header-h: 58px;
+  --toolbar-h: 48px;
+  --row-h: 44px;
+  --blur-glass: blur(20px) saturate(1.35);
+  --ease-spring: cubic-bezier(0.22, 1, 0.36, 1);
 
-  font: 13px/1.45 'Segoe UI', Assistant, Rubik, system-ui, sans-serif;
+  font: 14px/1.5 var(--font-sans);
   color: var(--text);
-  background: var(--bg);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -36,12 +52,22 @@
   box-sizing: border-box;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   min-width: 320px;
   min-height: 100svh;
   margin: 0;
   padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom)
     env(safe-area-inset-left);
+  background:
+    radial-gradient(ellipse 80% 60% at 10% 0%, var(--bg-mesh-1) 0%, transparent 55%),
+    radial-gradient(ellipse 70% 55% at 90% 8%, var(--bg-mesh-2) 0%, transparent 50%),
+    radial-gradient(ellipse 60% 50% at 50% 100%, var(--bg-mesh-3) 0%, transparent 45%),
+    var(--bg);
+  background-attachment: fixed;
 }
 
 button,
@@ -55,8 +81,8 @@ button:focus-visible,
 input:focus-visible,
 select:focus-visible,
 textarea:focus-visible {
-  outline: 2px solid rgba(43, 218, 229, 0.45);
-  outline-offset: 1px;
+  outline: 2px solid rgba(124, 141, 255, 0.5);
+  outline-offset: 2px;
 }
 
 #root {
@@ -68,4 +94,9 @@ h2,
 h3,
 p {
   margin: 0;
+}
+
+.jusic-logo {
+  flex-shrink: 0;
+  filter: drop-shadow(0 0 12px rgba(124, 141, 255, 0.25));
 }

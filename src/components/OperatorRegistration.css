@@ -1,12 +1,12 @@
 .operator-screen .operator-card {
-  gap: 12px;
+  gap: 14px;
 }
 
 .operator-hint {
   margin: 0;
   font-size: 13px;
-  line-height: 1.5;
-  color: rgba(244, 251, 252, 0.72);
+  line-height: 1.55;
+  color: rgba(245, 243, 255, 0.72);
   text-align: center;
 }
 
@@ -18,10 +18,10 @@
 .operator-error {
   margin: 8px 0 0;
   font-size: 13px;
-  color: #ff8f8f;
+  color: #ffb4b4;
   text-align: center;
 }
 
 .operator-submit {
-  margin-top: 8px;
+  margin-top: 10px;
 }
