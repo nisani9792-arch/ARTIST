@@ -73,14 +73,6 @@ export const AppShell = ({
         </div>
       )}
 
-      <div className="persist-banner">
-        <span>כל שינוי נשמר אוטומטית בשרת המאובטח</span>
-        <button className="btn btn-ghost btn-sm desktop-only" type="button" onClick={() => void handleBackup()}>
-          <Database size={14} />
-          הורד גיבוי
-        </button>
-      </div>
-
       {backupDue && !displayBackupMessage && (
         <div className="backup-reminder">
           מומלץ להוריד גיבוי JSON לשמירה חיצונית (פעם בשבוע)
@@ -92,10 +84,13 @@ export const AppShell = ({
 
       {displayBackupMessage && <div className="backup-ok">{displayBackupMessage}</div>}
 
+      <div className="app-header-stack">
       <header className="app-header">
         <div className="brand">
           <Link to="/" className="brand-link">
-            <JusicLogo size={36} variant="mark" />
+            <span className="brand-logo-frame" aria-hidden>
+              <JusicLogo size={52} variant="mark" />
+            </span>
             <span className="brand-title">{APP_NAME}</span>
           </Link>
           <span className="operator-badge" title="גורם מטפל מחובר">
@@ -204,6 +199,14 @@ export const AppShell = ({
       )}
         </div>
       </header>
+
+      <div className="header-utility-bar">
+        <button className="btn btn-ghost btn-sm" type="button" onClick={() => void handleBackup()}>
+          <Database size={14} />
+          הורד גיבוי
+        </button>
+      </div>
+      </div>
 
       {children}
 

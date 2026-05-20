@@ -13,47 +13,68 @@
   display: none;
 }
 
-/* Header — glass, floating */
-.app-header {
+.app-header-stack {
   position: sticky;
   top: 0;
   z-index: 40;
+  background: var(--surface-solid);
+  border-bottom: 1px solid var(--border);
+  box-shadow: var(--shadow-md);
+}
+
+/* Header — glass, floating */
+.app-header {
   display: flex;
   align-items: center;
   gap: 16px;
-  height: var(--header-h);
-  padding: 0 20px;
-  background: var(--surface);
-  backdrop-filter: var(--blur-glass);
-  -webkit-backdrop-filter: var(--blur-glass);
-  border-bottom: 1px solid var(--border);
+  min-height: var(--header-h);
+  padding: 12px 20px;
 }
 
 .brand {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
   flex-shrink: 0;
 }
 
 .brand-link {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
+  gap: 14px;
   color: inherit;
   text-decoration: none;
-  transition: opacity 180ms var(--ease-spring);
+  transition: transform 200ms var(--ease-spring), opacity 180ms var(--ease-spring);
 }
 
 .brand-link:hover {
-  opacity: 0.88;
+  opacity: 0.92;
+  transform: translateY(-1px);
+}
+
+.brand-logo-frame {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  border-radius: 18px;
+  background: linear-gradient(145deg, #ffffff 0%, var(--surface-2) 100%);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-md), 0 1px 0 rgba(255, 255, 255, 0.9) inset;
+}
+
+.brand-logo-frame .jusic-logo {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  box-shadow: var(--shadow-sm);
 }
 
 .brand-title {
-  font-size: 15px;
+  font-size: 17px;
   font-weight: 800;
-  letter-spacing: 0.04em;
-  background: linear-gradient(135deg, var(--accent-strong) 0%, var(--accent-mid) 50%, #5ec8f0 100%);
+  letter-spacing: 0.03em;
+  background: linear-gradient(135deg, var(--accent-strong) 0%, var(--accent) 55%, var(--accent-mid) 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -93,9 +114,9 @@
   gap: 6px;
   padding: 6px 12px;
   border-radius: 999px;
-  background: var(--surface-2);
-  backdrop-filter: blur(12px);
+  background: var(--surface-solid);
   border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
   white-space: nowrap;
   font-size: 12px;
   color: var(--muted);
@@ -227,7 +248,7 @@
   padding: 10px 20px;
   font-size: 13px;
   font-weight: 600;
-  color: #9b3030;
+  color: var(--red);
   background: var(--red-soft);
   border-bottom: 1px solid rgba(226, 85, 85, 0.2);
 }
@@ -238,9 +259,9 @@
   align-items: center;
   gap: 10px;
   padding: 12px 20px;
-  background: var(--surface);
-  backdrop-filter: var(--blur-glass);
+  background: var(--surface-solid);
   border-bottom: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
 }
 
 .search-field {
@@ -388,7 +409,7 @@
 }
 
 .crm-table tbody tr.selected {
-  background: rgba(124, 141, 255, 0.12);
+  background: var(--accent-soft);
 }
 
 .col-check {
@@ -628,7 +649,7 @@
 
 .chip-filter.active {
   border-color: var(--border-strong);
-  background: linear-gradient(135deg, var(--accent-soft), rgba(167, 139, 250, 0.12));
+  background: linear-gradient(135deg, var(--accent-soft), var(--brand-gray-soft));
   color: var(--accent-strong);
   box-shadow: var(--glow-sm);
 }
@@ -652,8 +673,8 @@
   padding: 14px;
   border-radius: var(--radius-lg);
   border: 1px solid var(--border);
-  background: var(--surface);
-  backdrop-filter: var(--blur-glass);
+  background: var(--surface-solid);
+  box-shadow: var(--shadow-sm);
   cursor: pointer;
   transition:
     border-color 220ms var(--ease-spring),
@@ -670,8 +691,8 @@
 
 .mini-card.selected {
   border-color: var(--border-strong);
-  box-shadow: var(--glow-accent);
-  background: rgba(255, 255, 255, 0.88);
+  box-shadow: var(--shadow-accent);
+  background: var(--surface-solid);
 }
 
 .mini-card.signed {
@@ -764,10 +785,9 @@
   width: min(380px, 92vw);
   display: flex;
   flex-direction: column;
-  background: var(--surface);
-  backdrop-filter: var(--blur-glass);
+  background: var(--surface-solid);
   border-inline-end: 1px solid var(--border);
-  box-shadow: var(--glow-md);
+  box-shadow: var(--shadow-lg);
 }
 
 .detail-header {
@@ -872,9 +892,9 @@
 }
 
 .btn-danger {
-  border-color: rgba(226, 85, 85, 0.35);
+  border-color: rgba(201, 74, 74, 0.35);
   background: var(--red-soft);
-  color: #9b3030;
+  color: var(--red);
 }
 
 .btn-danger:hover {
@@ -894,9 +914,8 @@
   padding: 0;
   border: 1px solid var(--border);
   border-radius: var(--radius-xl);
-  background: var(--surface);
-  backdrop-filter: var(--blur-glass);
-  box-shadow: var(--glow-md);
+  background: var(--surface-solid);
+  box-shadow: var(--shadow-lg);
   transform: translate(-50%, -50%);
   overflow: hidden;
 }
@@ -959,7 +978,16 @@
   color: var(--red);
 }
 
-.persist-banner,
+.header-utility-bar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 8px 20px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
 .backup-reminder,
 .backup-ok {
   display: flex;
@@ -969,13 +997,6 @@
   flex-wrap: wrap;
   padding: 10px 20px;
   font-size: 13px;
-}
-
-.persist-banner {
-  background: var(--surface-2);
-  backdrop-filter: blur(12px);
-  border-bottom: 1px solid var(--border);
-  color: var(--muted);
 }
 
 .backup-reminder {
@@ -1028,13 +1049,13 @@
 }
 
 .dashboard-stat-card {
-  background: var(--surface);
-  backdrop-filter: var(--blur-glass);
+  background: var(--surface-solid);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   padding: 18px;
   display: grid;
   gap: 8px;
+  box-shadow: var(--shadow-sm);
   transition:
     transform 220ms var(--ease-spring),
     box-shadow 220ms var(--ease-spring);
@@ -1042,7 +1063,7 @@
 
 .dashboard-stat-card:hover {
   transform: translateY(-2px);
-  box-shadow: var(--glow-sm);
+  box-shadow: var(--shadow-md);
 }
 
 .dashboard-stat-card span {
@@ -1079,7 +1100,7 @@
 .dashboard-shortcut {
   padding: 11px 18px;
   border-radius: 999px;
-  background: linear-gradient(135deg, var(--accent-soft), rgba(167, 139, 250, 0.1));
+  background: linear-gradient(135deg, var(--accent-soft), var(--brand-gray-soft));
   border: 1px solid var(--border);
   color: var(--accent-strong);
   text-decoration: none;
@@ -1162,13 +1183,13 @@
 }
 
 .kanban-column {
-  background: var(--surface-2);
-  backdrop-filter: blur(16px);
+  background: var(--surface-solid);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   display: flex;
   flex-direction: column;
   min-height: 300px;
+  box-shadow: var(--shadow-sm);
 }
 
 .kanban-column-header {
@@ -1209,7 +1230,7 @@
 
 .kanban-card:hover {
   transform: translateY(-2px);
-  box-shadow: var(--glow-sm);
+  box-shadow: var(--shadow-md);
 }
 
 .kanban-owner {
@@ -1231,9 +1252,9 @@
   border-radius: 999px;
   background: linear-gradient(
     90deg,
-    rgba(124, 141, 255, 0.08) 0%,
-    rgba(167, 139, 250, 0.14) 50%,
-    rgba(124, 141, 255, 0.08) 100%
+    rgba(41, 171, 226, 0.08) 0%,
+    rgba(125, 125, 125, 0.1) 50%,
+    rgba(41, 171, 226, 0.08) 100%
   );
   background-size: 200% 100%;
   animation: skeleton-shimmer 1.4s infinite linear;
@@ -1354,9 +1375,11 @@
 }
 
 .lock-error {
-  color: #ffb4b4;
+  color: var(--red);
   font-size: 13px;
+  font-weight: 600;
   margin: 8px 0 0;
+  text-align: center;
 }
 
 .sr-only {
@@ -1442,10 +1465,28 @@
 
   .app-header {
     flex-wrap: wrap;
-    height: auto;
     min-height: var(--header-h);
     padding: 10px 14px;
     gap: 10px;
+  }
+
+  .brand-logo-frame {
+    padding: 5px;
+    border-radius: 16px;
+  }
+
+  .brand-logo-frame .jusic-logo {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+  }
+
+  .brand-title {
+    font-size: 15px;
+  }
+
+  .header-utility-bar {
+    padding: 8px 14px;
   }
 
   .btn,

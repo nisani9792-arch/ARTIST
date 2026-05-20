@@ -5,40 +5,45 @@
 }
 
 :root {
-  /* Premium JUSIC ARTIST palette — soft mesh, Gemini-inspired */
-  --text: #5c6378;
-  --text-strong: #15182a;
-  --muted: #8b92a8;
-  --bg: #f3f1ff;
-  --bg-mesh-1: #e8e4ff;
-  --bg-mesh-2: #fce8f3;
-  --bg-mesh-3: #e0f4ff;
-  --surface: rgba(255, 255, 255, 0.72);
+  /* JUSIC ARTIST — cyan + slate from logo (#29ABE2, #7D7D7D, #555555) */
+  --text: #45505a;
+  --text-strong: #2c3238;
+  --muted: #66707a;
+  --bg: #e4eaee;
+  --bg-mesh-1: #d6eef7;
+  --bg-mesh-2: #dde3e7;
+  --bg-mesh-3: #cfebf5;
+  --surface: #f6f8fa;
   --surface-solid: #ffffff;
-  --surface-2: rgba(255, 255, 255, 0.52);
-  --border: rgba(139, 157, 255, 0.18);
-  --border-strong: rgba(124, 140, 255, 0.32);
-  --accent: #7c8dff;
-  --accent-mid: #a78bfa;
-  --accent-strong: #5b6fd6;
-  --accent-soft: rgba(124, 141, 255, 0.14);
-  --accent-glow: 0 0 28px rgba(124, 141, 255, 0.22);
+  --surface-2: #eef2f5;
+  --border: rgba(85, 85, 85, 0.16);
+  --border-strong: rgba(41, 171, 226, 0.38);
+  --accent: #29abe2;
+  --accent-mid: #4dbde8;
+  --accent-strong: #1a8bb8;
+  --accent-soft: rgba(41, 171, 226, 0.12);
+  --brand-gray: #7d7d7d;
+  --brand-gray-soft: rgba(125, 125, 125, 0.14);
+  --shadow-sm: 0 2px 8px rgba(44, 50, 56, 0.09), 0 1px 2px rgba(44, 50, 56, 0.05);
+  --shadow-md: 0 6px 20px rgba(44, 50, 56, 0.12), 0 2px 6px rgba(44, 50, 56, 0.06);
+  --shadow-lg: 0 12px 36px rgba(44, 50, 56, 0.15), 0 4px 12px rgba(44, 50, 56, 0.08);
+  --shadow-accent: 0 8px 24px rgba(41, 171, 226, 0.24);
+  --glow-sm: var(--shadow-sm);
+  --glow-md: var(--shadow-md);
+  --glow-accent: var(--shadow-accent);
   --green: #0d9f6e;
-  --green-soft: rgba(13, 159, 110, 0.1);
-  --red: #e25555;
-  --red-soft: rgba(226, 85, 85, 0.1);
-  --yellow: #c98a08;
-  --yellow-soft: rgba(201, 138, 8, 0.1);
-  --glow-sm: 0 0 16px rgba(124, 141, 255, 0.12);
-  --glow-md: 0 0 32px rgba(167, 139, 250, 0.18);
-  --glow-accent: 0 0 24px rgba(124, 141, 255, 0.28);
+  --green-soft: rgba(13, 159, 110, 0.12);
+  --red: #c94a4a;
+  --red-soft: rgba(201, 74, 74, 0.12);
+  --yellow: #b07808;
+  --yellow-soft: rgba(176, 120, 8, 0.12);
   --radius: 12px;
   --radius-lg: 18px;
   --radius-xl: 24px;
-  --header-h: 58px;
+  --header-h: 76px;
   --toolbar-h: 48px;
   --row-h: 44px;
-  --blur-glass: blur(20px) saturate(1.35);
+  --blur-glass: blur(18px) saturate(1.1);
   --ease-spring: cubic-bezier(0.22, 1, 0.36, 1);
 
   font: 14px/1.5 var(--font-sans);
@@ -81,7 +86,7 @@ button:focus-visible,
 input:focus-visible,
 select:focus-visible,
 textarea:focus-visible {
-  outline: 2px solid rgba(124, 141, 255, 0.5);
+  outline: 2px solid rgba(41, 171, 226, 0.55);
   outline-offset: 2px;
 }
 
@@ -99,5 +104,5 @@ p {
 .jusic-logo {
   flex-shrink: 0;
   object-fit: contain;
-  border-radius: 10px;
+  display: block;
 }

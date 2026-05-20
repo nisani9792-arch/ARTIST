@@ -6,7 +6,7 @@
   margin: 0;
   font-size: 13px;
   line-height: 1.55;
-  color: rgba(245, 243, 255, 0.72);
+  color: var(--muted);
   text-align: center;
 }
 
@@ -18,7 +18,7 @@
 .operator-error {
   margin: 8px 0 0;
   font-size: 13px;
-  color: #ffb4b4;
+  color: var(--red);
   text-align: center;
 }
 
