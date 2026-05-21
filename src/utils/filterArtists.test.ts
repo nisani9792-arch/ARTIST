@@ -15,6 +15,7 @@ const sampleArtists: CrmArtist[] = [
     source: '',
     notes: '',
     priority: 'ליצירת קשר',
+    bucket: 'main',
   },
   {
     id: '2',
@@ -28,6 +29,7 @@ const sampleArtists: CrmArtist[] = [
     source: '',
     notes: 'VIP',
     priority: 'שימור קשר',
+    bucket: 'popular',
   },
 ]
 
@@ -62,6 +64,7 @@ describe('filterArtists', () => {
         source: '',
         notes: '',
         priority: 'פתיחת חסם',
+        bucket: 'main',
       },
       sampleArtists[1]!,
     ])

@@ -1,6 +1,6 @@
 import type { AccessState } from './access'
 import { request } from './client'
-import type { ArtistRecord, SignatureStatus } from '../data/types'
+import type { ArtistBucket, ArtistRecord, SignatureStatus } from '../data/types'
 
 export type CrmArtist = ArtistRecord & {
   updatedAt?: string
@@ -13,6 +13,9 @@ export type HeaderStats = {
   unsigned: number
   stuck: number
   unassigned: number
+  popular: number
+  main_bucket: number
+  outside_genre: number
 }
 
 export type ArtistFilters = {
@@ -21,9 +24,10 @@ export type ArtistFilters = {
   owner?: string
   tag?: string
   genre?: string
+  bucket?: ArtistBucket | 'all'
   needsAction?: boolean
   myQueue?: boolean
-  sort?: 'smart' | 'name' | 'status' | 'tags'
+  sort?: 'smart' | 'name' | 'status' | 'tags' | 'bucket'
   page?: number
   limit?: number
 }
@@ -69,6 +73,7 @@ const buildSearchParams = (filters: ArtistFilters = {}) => {
   if (filters.owner && filters.owner !== 'all') params.set('owner', filters.owner)
   if (filters.tag && filters.tag !== 'all') params.set('tag', filters.tag)
   if (filters.genre && filters.genre !== 'all') params.set('genre', filters.genre)
+  if (filters.bucket && filters.bucket !== 'all') params.set('bucket', filters.bucket)
   if (filters.needsAction) params.set('needsAction', 'true')
   if (filters.myQueue) params.set('myQueue', 'true')
   if (filters.sort) params.set('sort', filters.sort)
@@ -129,17 +134,29 @@ export const bulkPatchArtists = async ({
   owner,
   priority,
   status,
+  bucket,
 }: {
   ids: string[]
   owner: string
   priority: string
   status: SignatureStatus
+  bucket?: ArtistBucket
 }) => {
   const response = await request<{ artists: CrmArtist[] }>('/api/artists/bulk', {
     method: 'POST',
-    body: JSON.stringify({ ids, owner, priority, status }),
+    body: JSON.stringify({ ids, owner, priority, status, bucket }),
   })
   return response.artists
+}
+
+export const classifyArtistBuckets = async (popularLimit: number) => {
+  return request<{ updated: number; popularLimit: number; stats: HeaderStats }>(
+    '/api/artists/classify-buckets',
+    {
+      method: 'POST',
+      body: JSON.stringify({ popularLimit }),
+    },
+  )
 }
 
 export const bulkDeleteArtists = async (ids: string[]) => {
@@ -187,13 +204,29 @@ export const exportArtistsCsv = (artists: CrmArtist[], filename = 'artist-crm-ex
     return `"${text.replace(/"/g, '""')}"`
   }
 
-  const headers = ['שם', 'שם באנגלית', 'סטטוס', 'גורם מטפל', 'זאנרים', 'תגיות', 'אלבום', 'הערות']
+  const headers = [
+    'שם',
+    'שם באנגלית',
+    'סטטוס',
+    'קטגוריה',
+    'גורם מטפל',
+    'זאנרים',
+    'תגיות',
+    'אלבום',
+    'הערות',
+  ]
+  const bucketLabels = {
+    popular: 'פופולרי',
+    main: 'שאר',
+    outside_genre: 'מחוץ לז׳אנר',
+  }
   const statusLabels = { signed: 'חתום', unsigned: 'לא חתום', stuck: 'תקוע' }
   const rows = artists.map((artist) => [
     artist.nameHe,
     artist.nameEn,
     statusLabels[artist.status],
     artist.owner,
+    bucketLabels[artist.bucket ?? 'main'],
     artist.genres,
     artist.tags,
     artist.latestAlbum,

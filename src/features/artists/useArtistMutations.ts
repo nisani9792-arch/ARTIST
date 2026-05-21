@@ -7,7 +7,7 @@ import {
   patchArtist,
   type CrmArtist,
 } from '../../api/artists'
-import type { SignatureStatus } from '../../data/types'
+import type { ArtistBucket, SignatureStatus } from '../../data/types'
 import { priorityForStatus } from '../../lib/constants'
 import { useToast } from '../../hooks/useToast'
 import { artistsKeys } from './useArtistsQuery'
@@ -70,16 +70,19 @@ export const useArtistMutations = (operatorName: string | null) => {
       ids,
       status,
       owner,
+      bucket,
     }: {
       ids: string[]
       status: SignatureStatus
       owner: string
+      bucket?: ArtistBucket
     }) =>
       bulkPatchArtists({
         ids,
         owner,
         status,
         priority: priorityForStatus(status),
+        bucket,
       }),
     onSuccess: async () => {
       await invalidateArtists()

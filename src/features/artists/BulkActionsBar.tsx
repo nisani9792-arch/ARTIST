@@ -1,13 +1,16 @@
 import { Trash2 } from 'lucide-react'
-import type { SignatureStatus } from '../../data/types'
+import { ARTIST_BUCKETS, BUCKET_META } from '../../lib/artistBuckets'
+import type { ArtistBucket, SignatureStatus } from '../../data/types'
 
 type BulkActionsBarProps = {
   selectedCount: number
   bulkStatus: SignatureStatus
   bulkOwner: string
+  bulkBucket: ArtistBucket | ''
   handlers: string[]
   onBulkStatusChange: (status: SignatureStatus) => void
   onBulkOwnerChange: (owner: string) => void
+  onBulkBucketChange: (bucket: ArtistBucket | '') => void
   onApplyBulk: () => void
   onBulkDelete: () => void
   onClearSelection: () => void
@@ -17,9 +20,11 @@ export const BulkActionsBar = ({
   selectedCount,
   bulkStatus,
   bulkOwner,
+  bulkBucket,
   handlers,
   onBulkStatusChange,
   onBulkOwnerChange,
+  onBulkBucketChange,
   onApplyBulk,
   onBulkDelete,
   onClearSelection,
@@ -38,6 +43,18 @@ export const BulkActionsBar = ({
         {handlers.map((handler) => (
           <option key={handler} value={handler}>
             {handler}
+          </option>
+        ))}
+      </select>
+      <select
+        value={bulkBucket}
+        onChange={(e) => onBulkBucketChange((e.target.value || '') as ArtistBucket | '')}
+        aria-label="קטגוריה מרוכזת"
+      >
+        <option value="">ללא שינוי קטגוריה</option>
+        {ARTIST_BUCKETS.map((bucket) => (
+          <option key={bucket} value={bucket}>
+            {BUCKET_META[bucket].shortLabel}
           </option>
         ))}
       </select>

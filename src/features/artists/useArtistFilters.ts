@@ -2,16 +2,15 @@ import { useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useDebouncedValue } from '../../hooks/useDebouncedValue'
 import { MY_QUEUE_KEY } from '../../lib/constants'
-import type { SortOption, StatusFilter, ViewMode } from '../../types'
+import { loadWorkspaceSettings } from '../../lib/artistBuckets'
+import type { BucketFilter, SortOption, StatusFilter, ViewMode } from '../../types'
 import type { ArtistFilters } from '../../api/artists'
 
 const parseBool = (value: string | null) => value === 'true' || value === '1'
 
 export const useArtistFilters = () => {
   const [searchParams, setSearchParams] = useSearchParams()
-  const [viewMode, setViewMode] = useState<ViewMode>(() =>
-    window.matchMedia('(max-width: 768px)').matches ? 'cards' : 'cards',
-  )
+  const [viewMode, setViewMode] = useState<ViewMode>(() => loadWorkspaceSettings().defaultViewMode)
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
 
@@ -21,6 +20,7 @@ export const useArtistFilters = () => {
   const ownerFilter = searchParams.get('owner') ?? 'all'
   const tagFilter = searchParams.get('tag') ?? 'all'
   const genreFilter = searchParams.get('genre') ?? 'all'
+  const bucketFilter = (searchParams.get('bucket') ?? 'all') as BucketFilter
   const needsActionOnly = parseBool(searchParams.get('needsAction'))
   const myQueue = parseBool(searchParams.get('myQueue'))
   const sortBy = (searchParams.get('sort') ?? 'smart') as SortOption
@@ -43,6 +43,7 @@ export const useArtistFilters = () => {
   const setOwnerFilter = (value: string) => patchParams({ owner: value, page: '1' })
   const setTagFilter = (value: string) => patchParams({ tag: value, page: '1' })
   const setGenreFilter = (value: string) => patchParams({ genre: value, page: '1' })
+  const setBucketFilter = (value: BucketFilter) => patchParams({ bucket: value, page: '1' })
   const setNeedsActionOnly = (value: boolean) =>
     patchParams({ needsAction: value ? 'true' : null, page: '1' })
   const setMyQueue = (value: boolean) => {
@@ -60,6 +61,7 @@ export const useArtistFilters = () => {
       owner: ownerFilter,
       tag: tagFilter,
       genre: genreFilter,
+      bucket: bucketFilter,
       needsAction: needsActionOnly,
       myQueue,
       sort: sortBy,
@@ -72,6 +74,7 @@ export const useArtistFilters = () => {
       ownerFilter,
       tagFilter,
       genreFilter,
+      bucketFilter,
       needsActionOnly,
       myQueue,
       sortBy,
@@ -93,6 +96,7 @@ export const useArtistFilters = () => {
     ownerFilter,
     tagFilter,
     genreFilter,
+    bucketFilter,
     needsActionOnly,
     myQueue,
     sortBy,
@@ -104,6 +108,7 @@ export const useArtistFilters = () => {
     setOwnerFilter,
     setTagFilter,
     setGenreFilter,
+    setBucketFilter,
     setNeedsActionOnly,
     setMyQueue,
     setSortBy,

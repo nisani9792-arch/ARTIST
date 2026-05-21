@@ -1,6 +1,7 @@
 import { Search } from 'lucide-react'
 import type { FilterOptions } from '../../api/artists'
-import type { SortOption, StatusFilter } from '../../types'
+import { BUCKET_META } from '../../lib/artistBuckets'
+import type { BucketFilter, SortOption, StatusFilter } from '../../types'
 
 type ArtistsToolbarProps = {
   query: string
@@ -8,6 +9,7 @@ type ArtistsToolbarProps = {
   ownerFilter: string
   tagFilter: string
   genreFilter: string
+  bucketFilter: BucketFilter
   needsActionOnly: boolean
   myQueue: boolean
   sortBy: SortOption
@@ -20,6 +22,7 @@ type ArtistsToolbarProps = {
   onOwnerFilterChange: (value: string) => void
   onTagFilterChange: (value: string) => void
   onGenreFilterChange: (value: string) => void
+  onBucketFilterChange: (value: BucketFilter) => void
   onNeedsActionChange: (value: boolean) => void
   onMyQueueChange: (value: boolean) => void
   onSortChange: (value: SortOption) => void
@@ -32,6 +35,7 @@ export const ArtistsToolbar = ({
   ownerFilter,
   tagFilter,
   genreFilter,
+  bucketFilter,
   needsActionOnly,
   myQueue,
   sortBy,
@@ -44,6 +48,7 @@ export const ArtistsToolbar = ({
   onOwnerFilterChange,
   onTagFilterChange,
   onGenreFilterChange,
+  onBucketFilterChange,
   onNeedsActionChange,
   onMyQueueChange,
   onSortChange,
@@ -63,6 +68,26 @@ export const ArtistsToolbar = ({
       </label>
 
       <div className="toolbar-panel">
+        <div className="quick-filters bucket-filters" role="group" aria-label="קטגוריות">
+          {(
+            [
+              ['all', 'כל הקטגוריות'],
+              ['popular', BUCKET_META.popular.shortLabel],
+              ['main', BUCKET_META.main.shortLabel],
+              ['outside_genre', BUCKET_META.outside_genre.shortLabel],
+            ] as const
+          ).map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              className={`chip-filter bucket-chip ${bucketFilter === value ? 'active' : ''}`}
+              onClick={() => onBucketFilterChange(value)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
         <div className="quick-filters" role="group" aria-label="סינון מהיר">
           {(
             [
@@ -115,6 +140,7 @@ export const ArtistsToolbar = ({
           <option value="name">שם</option>
           <option value="status">סטטוס</option>
           <option value="tags">תגיות</option>
+          <option value="bucket">קטגוריה</option>
         </select>
 
         <label className="toolbar-check">

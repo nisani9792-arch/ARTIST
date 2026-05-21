@@ -1,7 +1,7 @@
 import { AnimatePresence } from 'framer-motion'
 import { ChevronLeft, ChevronRight, SlidersHorizontal } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useNavigate, useOutletContext } from 'react-router-dom'
+import { useNavigate, useOutletContext, useSearchParams } from 'react-router-dom'
 import {
   downloadBackup,
   exportArtistsCsv,
@@ -11,6 +11,8 @@ import {
 import { ArtistCardGrid } from '../components/ArtistCardGrid'
 import { ArtistFormModal } from '../components/ArtistFormModal'
 import { ArtistKanban } from '../features/artists/ArtistKanban'
+import { ArtistSegmentBoard } from '../features/artists/ArtistSegmentBoard'
+import { WorkspaceSettingsPanel } from '../components/WorkspaceSettingsPanel'
 import { ArtistsSkeleton } from '../features/artists/ArtistsSkeleton'
 import { ArtistsTable } from '../features/artists/ArtistsTable'
 import { ArtistsToolbar } from '../features/artists/ArtistsToolbar'
@@ -19,13 +21,14 @@ import { useArtistFilters } from '../features/artists/useArtistFilters'
 import { useArtistMutations } from '../features/artists/useArtistMutations'
 import { useArtistsPage } from '../features/artists/useArtistsQuery'
 import { HANDLERS, STATUS_META, priorityForStatus } from '../lib/constants'
-import type { SignatureStatus } from '../data/types'
+import type { ArtistBucket, SignatureStatus } from '../data/types'
 import type { CrmOutletContext } from './CrmLayout'
 
 export const ArtistsPage = () => {
   const { operatorName, setArtistsUi, setSaveStatus, setStats, setBackupHandler, setExportHandler } =
     useOutletContext<CrmOutletContext>()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
 
   const filters = useArtistFilters()
   const {
@@ -45,6 +48,7 @@ export const ArtistsPage = () => {
     ownerFilter,
     tagFilter,
     genreFilter,
+    bucketFilter,
     needsActionOnly,
     myQueue,
     sortBy,
@@ -53,6 +57,7 @@ export const ArtistsPage = () => {
     setOwnerFilter,
     setTagFilter,
     setGenreFilter,
+    setBucketFilter,
     setNeedsActionOnly,
     setMyQueue,
     setSortBy,
@@ -60,8 +65,14 @@ export const ArtistsPage = () => {
 
   const queryFilters = useMemo(
     () =>
-      viewMode === 'kanban'
-        ? { ...apiFilters, page: 1, limit: Math.max(limit, 200) }
+      viewMode === 'kanban' || viewMode === 'segments'
+        ? {
+            ...apiFilters,
+            page: 1,
+            limit: Math.max(limit, viewMode === 'segments' ? 500 : 200),
+            sort: viewMode === 'segments' ? ('bucket' as const) : apiFilters.sort,
+            bucket: viewMode === 'segments' ? 'all' : apiFilters.bucket,
+          }
         : apiFilters,
     [apiFilters, limit, viewMode],
   )
@@ -77,6 +88,7 @@ export const ArtistsPage = () => {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [bulkStatus, setBulkStatus] = useState<SignatureStatus>('unsigned')
   const [bulkOwner, setBulkOwner] = useState(operatorName ?? 'שימון')
+  const [bulkBucket, setBulkBucket] = useState<ArtistBucket | ''>('')
   const [formMode, setFormMode] = useState<'create' | 'edit' | null>(null)
   const [editingArtist, setEditingArtist] = useState<CrmArtist | null>(null)
   const [notesDrafts, setNotesDrafts] = useState<Record<string, string>>({})
@@ -99,6 +111,13 @@ export const ArtistsPage = () => {
   const total = data?.total ?? 0
   const totalPages = Math.max(1, Math.ceil(total / limit))
   const safePage = Math.min(page, totalPages)
+
+  useEffect(() => {
+    const view = searchParams.get('view')
+    if (view === 'segments' || view === 'cards' || view === 'table' || view === 'kanban') {
+      setViewMode(view)
+    }
+  }, [searchParams, setViewMode])
 
   useEffect(() => {
     if (operatorName) setBulkOwner(operatorName)
@@ -220,6 +239,10 @@ export const ArtistsPage = () => {
           <SlidersHorizontal size={16} />
           סינון
         </button>
+        <WorkspaceSettingsPanel
+          onSettingsChange={() => void refetch()}
+          onViewModeChange={setViewMode}
+        />
       </div>
 
       <ArtistsToolbar
@@ -228,6 +251,7 @@ export const ArtistsPage = () => {
         ownerFilter={ownerFilter}
         tagFilter={tagFilter}
         genreFilter={genreFilter}
+        bucketFilter={bucketFilter}
         needsActionOnly={needsActionOnly}
         myQueue={myQueue}
         sortBy={sortBy}
@@ -240,6 +264,7 @@ export const ArtistsPage = () => {
         onOwnerFilterChange={setOwnerFilter}
         onTagFilterChange={setTagFilter}
         onGenreFilterChange={setGenreFilter}
+        onBucketFilterChange={setBucketFilter}
         onNeedsActionChange={setNeedsActionOnly}
         onMyQueueChange={setMyQueue}
         onSortChange={setSortBy}
@@ -251,12 +276,19 @@ export const ArtistsPage = () => {
           selectedCount={selectedIds.size}
           bulkStatus={bulkStatus}
           bulkOwner={bulkOwner}
+          bulkBucket={bulkBucket}
           handlers={handlerList}
           onBulkStatusChange={setBulkStatus}
           onBulkOwnerChange={setBulkOwner}
+          onBulkBucketChange={setBulkBucket}
           onApplyBulk={() =>
             bulkPatchMutation.mutate(
-              { ids: [...selectedIds], status: bulkStatus, owner: bulkOwner },
+              {
+                ids: [...selectedIds],
+                status: bulkStatus,
+                owner: bulkOwner,
+                bucket: bulkBucket || undefined,
+              },
               { onSuccess: () => setSelectedIds(new Set()) },
             )
           }
@@ -274,6 +306,16 @@ export const ArtistsPage = () => {
         <div className="content-wrap">
           {isLoading ? (
             <ArtistsSkeleton />
+          ) : viewMode === 'segments' ? (
+            <ArtistSegmentBoard
+              artists={artists}
+              handlers={handlerList}
+              statusMeta={STATUS_META}
+              selectedIds={selectedIds}
+              onToggleSelect={toggleSelected}
+              onUpdate={updateArtist}
+              onOpen={openArtist}
+            />
           ) : viewMode === 'cards' ? (
             <ArtistCardGrid
               artists={artists}
@@ -310,7 +352,7 @@ export const ArtistsPage = () => {
         </div>
       </div>
 
-      {viewMode !== 'kanban' && (
+      {viewMode !== 'kanban' && viewMode !== 'segments' && (
         <footer className="table-footer">
           <span>
             {total.toLocaleString('he-IL')} תוצאות

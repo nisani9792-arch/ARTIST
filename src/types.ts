@@ -5,8 +5,10 @@ export type CrmArtist = ArtistRecord & {
   updatedBy?: string
 }
 
-export type ViewMode = 'cards' | 'table' | 'kanban'
+export type ViewMode = 'segments' | 'cards' | 'table' | 'kanban'
+export type { ArtistBucket } from './data/types'
+export type { BucketFilter } from './lib/artistBuckets'
 export type StatusFilter = SignatureStatus | 'all'
 export type OwnerFilter = string | 'all'
-export type SortOption = 'smart' | 'name' | 'status' | 'tags'
+export type SortOption = 'smart' | 'name' | 'status' | 'tags' | 'bucket'
 export type SaveStatus = 'idle' | 'loading' | 'saving' | 'error'

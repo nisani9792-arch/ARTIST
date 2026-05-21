@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { Database, Download, LayoutGrid, Plus, RefreshCw, Table2, Columns3 } from 'lucide-react'
+import { Database, Download, LayoutGrid, Plus, RefreshCw, Table2, Columns3, Layers3 } from 'lucide-react'
 import { APP_NAME } from '../lib/branding'
 import { JusicLogo } from './JusicLogo'
 import { InstallPrompt } from './InstallPrompt'
@@ -14,13 +14,13 @@ type AppShellProps = {
   operatorName: string
   stats?: HeaderStats
   saveStatus: 'idle' | 'loading' | 'saving' | 'error'
-  viewMode?: 'cards' | 'table' | 'kanban'
+  viewMode?: 'segments' | 'cards' | 'table' | 'kanban'
   searchOpen?: boolean
   onRefresh?: () => void
   onExport?: () => void
   onBackup?: () => void
   onNewArtist?: () => void
-  onSetView?: (mode: 'cards' | 'table' | 'kanban') => void
+  onSetView?: (mode: 'segments' | 'cards' | 'table' | 'kanban') => void
   onToggleSearch?: () => void
   backupMessage?: string
   children: ReactNode
@@ -118,6 +118,14 @@ export const AppShell = ({
         <div className="header-actions">
           {isArtistsRoute && onSetView && (
             <div className="view-toggle desktop-only" role="group" aria-label="תצוגה">
+              <button
+                type="button"
+                className={`btn btn-icon ${viewMode === 'segments' ? 'active' : ''}`}
+                onClick={() => onSetView('segments')}
+                title="3 קטגוריות"
+              >
+                <Layers3 size={15} />
+              </button>
               <button
                 type="button"
                 className={`btn btn-icon ${viewMode === 'cards' ? 'active' : ''}`}

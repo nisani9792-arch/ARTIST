@@ -1,6 +1,7 @@
 import { memo } from 'react'
 import type { SignatureStatus } from '../data/types'
 import type { CrmArtist } from '../types'
+import { ArtistBucketSelect } from '../features/artists/ArtistBucketSelect'
 import { priorityForStatus } from '../lib/constants'
 
 type StatusMeta = Record<SignatureStatus, { label: string; tone: string }>
@@ -79,6 +80,11 @@ export const ArtistCardGrid = memo(function ArtistCardGrid({
                 {displayName}
               </h3>
             </button>
+
+            <ArtistBucketSelect
+              value={artist.bucket ?? 'main'}
+              onChange={(bucket) => onUpdate(artist.id, { bucket })}
+            />
 
             <label className="mini-card-field">
               <span>גורם מטפל</span>

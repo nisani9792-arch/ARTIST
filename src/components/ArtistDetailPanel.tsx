@@ -1,8 +1,10 @@
 import { AnimatePresence } from 'framer-motion'
 import { Pencil, Trash2, X } from 'lucide-react'
 import { useEffect } from 'react'
+import { ArtistBucketSelect } from '../features/artists/ArtistBucketSelect'
 import type { SignatureStatus } from '../data/types'
 import type { CrmArtist } from '../types'
+import { BUCKET_META } from '../lib/artistBuckets'
 import { MotionBackdrop } from './motion/MotionBackdrop'
 import { MotionPanel } from './motion/MotionPanel'
 
@@ -14,6 +16,7 @@ type ArtistDetailPanelProps = {
   onClose: () => void
   onEdit: (artist: CrmArtist) => void
   onDelete: (artist: CrmArtist) => void
+  onUpdate?: (id: string, patch: Partial<CrmArtist>) => void
 }
 
 export const ArtistDetailPanel = ({
@@ -22,6 +25,7 @@ export const ArtistDetailPanel = ({
   onClose,
   onEdit,
   onDelete,
+  onUpdate,
 }: ArtistDetailPanelProps) => {
   const meta = statusMeta[artist.status]
   const displayName = artist.nameHe || artist.nameEn || 'ללא שם'
@@ -51,6 +55,18 @@ export const ArtistDetailPanel = ({
         </header>
 
         <div className="detail-body">
+          {onUpdate ? (
+            <ArtistBucketSelect
+              value={artist.bucket ?? 'main'}
+              onChange={(bucket) => onUpdate(artist.id, { bucket })}
+            />
+          ) : (
+            <div className="detail-field">
+              <span>קטגוריה</span>
+              <p>{BUCKET_META[artist.bucket ?? 'main'].label}</p>
+            </div>
+          )}
+
           <div className="detail-field">
             <span>גורם מטפל</span>
             <p>{artist.owner}</p>

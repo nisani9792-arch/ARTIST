@@ -49,6 +49,10 @@ export const ArtistDetailPage = () => {
       <ArtistDetailPanel
         artist={artist}
         statusMeta={STATUS_META}
+        onUpdate={(id, patch) => {
+          patchMutation.mutate({ id, patch })
+          setArtist((current) => (current ? { ...current, ...patch } : current))
+        }}
         onClose={() => navigate('/artists')}
         onEdit={() => setFormOpen(true)}
         onDelete={() => {

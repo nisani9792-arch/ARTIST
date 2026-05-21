@@ -7,8 +7,10 @@ const rateLimit = require('express-rate-limit')
 const {
   bulkDeleteArtists,
   bulkUpdateArtists,
+  classifyArtistBucketsInDb,
   createArtist,
   deleteArtist,
+  ensureBucketsClassified,
   getAccessByIp,
   getArtistById,
   getArtists,
@@ -85,6 +87,7 @@ const parseSearchQuery = (req) => ({
   owner: req.query.owner ?? 'all',
   tag: req.query.tag ?? 'all',
   genre: req.query.genre ?? 'all',
+  bucket: req.query.bucket ?? 'all',
   needsAction: req.query.needsAction === 'true' || req.query.needsAction === '1',
   myQueue: req.query.myQueue === 'true' || req.query.myQueue === '1',
   sort: req.query.sort ?? 'smart',
@@ -157,6 +160,17 @@ app.get('/api/artists/filters', requireAccess, async (_req, res, next) => {
     const filters = await getFilterOptions()
     res.setHeader('Cache-Control', 'private, no-cache')
     res.json(filters)
+  } catch (error) {
+    next(error)
+  }
+})
+
+app.post('/api/artists/classify-buckets', requireAccess, async (req, res, next) => {
+  try {
+    const popularLimit = Number(req.body?.popularLimit ?? req.query?.popularLimit ?? 20)
+    const result = await classifyArtistBucketsInDb(popularLimit)
+    const stats = await getStats()
+    res.json({ ...result, stats })
   } catch (error) {
     next(error)
   }
@@ -297,6 +311,7 @@ app.use((error, _req, res, _next) => {
 })
 
 setupDatabase()
+  .then(() => ensureBucketsClassified())
   .then(() => {
     app.listen(port, () => {
       console.log(`JUSIC ARTIST CRM server running at http://localhost:${port}`)
