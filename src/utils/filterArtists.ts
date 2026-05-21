@@ -54,8 +54,7 @@ export const filterArtistRows = (
     const matchesOwner = ownerFilter === 'all' || artist.owner === ownerFilter
     const matchesTag = tagFilter === 'all' || artist.tags.includes(tagFilter)
     const matchesGenre = genreFilter === 'all' || artist.genres.includes(genreFilter)
-    const matchesAction =
-      !needsActionOnly || artist.status !== 'signed' || artist.owner === 'לא שויך'
+    const matchesAction = !needsActionOnly || artist.status !== 'signed'
 
     return (
       matchesSearch &&

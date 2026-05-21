@@ -282,7 +282,6 @@ const whereClause = (filters) => sql`
   AND (
     ${!filters.needsActionFlag}::boolean
     OR status <> 'signed'
-    OR owner = ${UNASSIGNED_OWNER}
   )
   AND (
     ${!filters.myQueueFlag}::boolean

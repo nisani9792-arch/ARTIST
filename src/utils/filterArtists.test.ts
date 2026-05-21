@@ -81,4 +81,21 @@ describe('filterArtists', () => {
 
     expect(result[0]?.status).toBe('stuck')
   })
+
+  it('hides signed artists when needs action filter is on', () => {
+    const rows = buildArtistSearchRows(sampleArtists)
+    const result = filterArtistRows(rows, {
+      query: '',
+      statusFilter: 'all',
+      ownerFilter: 'all',
+      tagFilter: 'all',
+      genreFilter: 'all',
+      needsActionOnly: true,
+      sortBy: 'name',
+    })
+
+    expect(result).toHaveLength(1)
+    expect(result[0]?.id).toBe('1')
+    expect(result[0]?.status).toBe('unsigned')
+  })
 })
