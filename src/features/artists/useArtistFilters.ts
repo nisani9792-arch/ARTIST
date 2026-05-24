@@ -1,16 +1,30 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useDebouncedValue } from '../../hooks/useDebouncedValue'
 import { MY_QUEUE_KEY } from '../../lib/constants'
-import { loadWorkspaceSettings } from '../../lib/artistBuckets'
+import {
+  loadWorkspaceSettings,
+  saveWorkspaceSettings,
+} from '../../lib/artistBuckets'
 import type { BucketFilter, SortOption, StatusFilter, ViewMode } from '../../types'
 import type { ArtistFilters } from '../../api/artists'
 
 const parseBool = (value: string | null) => value === 'true' || value === '1'
 
+const parseViewMode = (value: string | null): ViewMode | null => {
+  if (value === 'segments' || value === 'cards' || value === 'table' || value === 'kanban') {
+    return value
+  }
+  return null
+}
+
 export const useArtistFilters = () => {
   const [searchParams, setSearchParams] = useSearchParams()
-  const [viewMode, setViewMode] = useState<ViewMode>(() => loadWorkspaceSettings().defaultViewMode)
+  const [viewMode, setViewModeState] = useState<ViewMode>(() => {
+    const fromUrl = parseViewMode(searchParams.get('view'))
+    if (fromUrl) return fromUrl
+    return loadWorkspaceSettings().defaultViewMode
+  })
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
 
@@ -53,6 +67,23 @@ export const useArtistFilters = () => {
   const setSortBy = (value: SortOption) => patchParams({ sort: value, page: '1' })
   const setPage = (value: number) => patchParams({ page: String(value) })
   const setLimit = (value: number) => patchParams({ limit: String(value), page: '1' })
+
+  const setViewMode = (mode: ViewMode) => {
+    setViewModeState(mode)
+    patchParams({ view: mode })
+    saveWorkspaceSettings({ ...loadWorkspaceSettings(), defaultViewMode: mode })
+  }
+
+  useEffect(() => {
+    const fromUrl = parseViewMode(searchParams.get('view'))
+    if (fromUrl) {
+      setViewModeState(fromUrl)
+      return
+    }
+    setViewModeState('kanban')
+    patchParams({ view: 'kanban' })
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- sync URL once when view param missing
+  }, [searchParams.get('view')])
 
   const apiFilters: ArtistFilters = useMemo(
     () => ({

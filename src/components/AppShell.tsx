@@ -30,7 +30,7 @@ export const AppShell = ({
   operatorName,
   stats,
   saveStatus,
-  viewMode = 'cards',
+  viewMode = 'kanban',
   searchOpen = false,
   onRefresh,
   onExport,
@@ -120,6 +120,14 @@ export const AppShell = ({
             <div className="view-toggle desktop-only" role="group" aria-label="תצוגה">
               <button
                 type="button"
+                className={`btn btn-icon ${viewMode === 'kanban' ? 'active' : ''}`}
+                onClick={() => onSetView('kanban')}
+                title="משפך סטטוס"
+              >
+                <Columns3 size={15} />
+              </button>
+              <button
+                type="button"
                 className={`btn btn-icon ${viewMode === 'segments' ? 'active' : ''}`}
                 onClick={() => onSetView('segments')}
                 title="3 קטגוריות"
@@ -141,14 +149,6 @@ export const AppShell = ({
                 title="טבלה"
               >
                 <Table2 size={15} />
-              </button>
-              <button
-                type="button"
-                className={`btn btn-icon ${viewMode === 'kanban' ? 'active' : ''}`}
-                onClick={() => onSetView('kanban')}
-                title="משפך סטטוס"
-              >
-                <Columns3 size={15} />
               </button>
             </div>
           )}
@@ -199,7 +199,7 @@ export const AppShell = ({
         <button
           className="btn btn-primary desktop-only"
           type="button"
-          onClick={() => navigate('/artists')}
+          onClick={() => navigate('/artists?view=kanban')}
         >
           <Plus size={14} />
           אומנים
@@ -221,9 +221,12 @@ export const AppShell = ({
       <MobileBottomBar
         searchOpen={searchOpen}
         onNavigateHome={() => navigate('/')}
-        onNavigateArtists={() => navigate('/artists')}
+        onNavigateArtists={() => {
+          navigate('/artists?view=kanban')
+          onSetView?.('kanban')
+        }}
         onToggleSearch={() => onToggleSearch?.()}
-        onNewArtist={() => (onNewArtist ? onNewArtist() : navigate('/artists'))}
+        onNewArtist={() => (onNewArtist ? onNewArtist() : navigate('/artists?view=kanban'))}
         onBackup={() => void handleBackup()}
       />
     </div>

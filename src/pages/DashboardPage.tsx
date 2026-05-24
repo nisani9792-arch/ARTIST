@@ -55,19 +55,19 @@ export const DashboardPage = ({ operatorName }: DashboardPageProps) => {
       <section className="dashboard-buckets">
         <h2>קטגוריות אומנים</h2>
         <div className="dashboard-buckets-grid">
-          <Link className="dashboard-bucket-card bucket-popular" to="/artists?bucket=popular">
+          <Link className="dashboard-bucket-card bucket-popular" to="/artists?view=kanban&bucket=popular">
             <span>{BUCKET_META.popular.label}</span>
             <strong>{stats?.popular?.toLocaleString('he-IL') ?? '—'}</strong>
             <small>{BUCKET_META.popular.hint}</small>
           </Link>
-          <Link className="dashboard-bucket-card bucket-main" to="/artists?bucket=main">
+          <Link className="dashboard-bucket-card bucket-main" to="/artists?view=kanban&bucket=main">
             <span>{BUCKET_META.main.label}</span>
             <strong>{stats?.main_bucket?.toLocaleString('he-IL') ?? '—'}</strong>
             <small>{BUCKET_META.main.hint}</small>
           </Link>
           <Link
             className="dashboard-bucket-card bucket-outside"
-            to="/artists?bucket=outside_genre"
+            to="/artists?view=kanban&bucket=outside_genre"
           >
             <span>{BUCKET_META.outside_genre.label}</span>
             <strong>{stats?.outside_genre?.toLocaleString('he-IL') ?? '—'}</strong>
@@ -89,7 +89,7 @@ export const DashboardPage = ({ operatorName }: DashboardPageProps) => {
         <Link className="dashboard-shortcut" to="/artists?needsAction=true">
           דורש פעולה
         </Link>
-        <Link className="dashboard-shortcut" to="/artists">
+        <Link className="dashboard-shortcut" to="/artists?view=kanban">
           כל האומנים
         </Link>
       </section>

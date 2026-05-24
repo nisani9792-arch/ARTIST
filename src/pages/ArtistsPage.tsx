@@ -1,7 +1,7 @@
 import { AnimatePresence } from 'framer-motion'
 import { ChevronLeft, ChevronRight, SlidersHorizontal } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useNavigate, useOutletContext, useSearchParams } from 'react-router-dom'
+import { useNavigate, useOutletContext } from 'react-router-dom'
 import {
   downloadBackup,
   exportArtistsCsv,
@@ -17,6 +17,7 @@ import { WorkspaceSettingsPanel } from '../components/WorkspaceSettingsPanel'
 import { ArtistsSkeleton } from '../features/artists/ArtistsSkeleton'
 import { ArtistsTable } from '../features/artists/ArtistsTable'
 import { ArtistsToolbar } from '../features/artists/ArtistsToolbar'
+import { ArtistsViewSwitcher } from '../features/artists/ArtistsViewSwitcher'
 import { BulkActionsBar } from '../features/artists/BulkActionsBar'
 import { useArtistFilters } from '../features/artists/useArtistFilters'
 import { useArtistMutations } from '../features/artists/useArtistMutations'
@@ -29,7 +30,6 @@ export const ArtistsPage = () => {
   const { operatorName, setArtistsUi, setSaveStatus, setStats, setBackupHandler, setExportHandler } =
     useOutletContext<CrmOutletContext>()
   const navigate = useNavigate()
-  const [searchParams] = useSearchParams()
 
   const filters = useArtistFilters()
   const {
@@ -113,13 +113,6 @@ export const ArtistsPage = () => {
   const total = data?.total ?? 0
   const totalPages = Math.max(1, Math.ceil(total / limit))
   const safePage = Math.min(page, totalPages)
-
-  useEffect(() => {
-    const view = searchParams.get('view')
-    if (view === 'segments' || view === 'cards' || view === 'table' || view === 'kanban') {
-      setViewMode(view)
-    }
-  }, [searchParams, setViewMode])
 
   useEffect(() => {
     if (operatorName) setBulkOwner(operatorName)
@@ -255,6 +248,8 @@ export const ArtistsPage = () => {
           onViewModeChange={setViewMode}
         />
       </div>
+
+      <ArtistsViewSwitcher viewMode={viewMode} onChange={setViewMode} />
 
       <ArtistsToolbar
         query={query}

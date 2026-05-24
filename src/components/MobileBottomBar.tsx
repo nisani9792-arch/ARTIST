@@ -23,9 +23,14 @@ export const MobileBottomBar = ({
         <Home size={20} />
         <span>בית</span>
       </button>
-      <button type="button" className="mobile-nav-btn" onClick={onNavigateArtists}>
+      <button
+        type="button"
+        className="mobile-nav-btn"
+        onClick={onNavigateArtists}
+        title="משפך סטטוס אומנים"
+      >
         <LayoutGrid size={20} />
-        <span>אומנים</span>
+        <span>משפך</span>
       </button>
       <button
         type="button"

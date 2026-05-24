@@ -42,7 +42,7 @@ export type WorkspaceSettings = {
 
 export const DEFAULT_WORKSPACE_SETTINGS: WorkspaceSettings = {
   popularLimit: 20,
-  defaultViewMode: 'segments',
+  defaultViewMode: 'kanban',
   dashboardLayout: 'comfortable',
 }
 

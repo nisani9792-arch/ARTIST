@@ -1708,6 +1708,42 @@
   padding: 20px 8px;
 }
 
+.artists-view-switcher {
+  display: none;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  margin: 0 0 10px;
+  padding: 6px;
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: var(--blur-glass);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.artists-view-switcher-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  min-height: 48px;
+  padding: 6px 4px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.artists-view-switcher-btn.active {
+  color: var(--text-strong);
+  background: var(--accent-soft);
+  border-color: var(--border-strong);
+}
+
 .skeleton-grid .skeleton-card {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -1884,6 +1920,10 @@
 
   .mobile-only {
     display: block;
+  }
+
+  .artists-view-switcher {
+    display: grid;
   }
 
   .funnel-kanban {
