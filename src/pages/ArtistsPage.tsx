@@ -10,7 +10,8 @@ import {
 } from '../api/artists'
 import { ArtistCardGrid } from '../components/ArtistCardGrid'
 import { ArtistFormModal } from '../components/ArtistFormModal'
-import { ArtistKanban } from '../features/artists/ArtistKanban'
+import { ArtistDetailPanel } from '../components/ArtistDetailPanel'
+import { ArtistStatusFunnel } from '../features/artists/funnel/ArtistStatusFunnel'
 import { ArtistSegmentBoard } from '../features/artists/ArtistSegmentBoard'
 import { WorkspaceSettingsPanel } from '../components/WorkspaceSettingsPanel'
 import { ArtistsSkeleton } from '../features/artists/ArtistsSkeleton'
@@ -92,6 +93,7 @@ export const ArtistsPage = () => {
   const [formMode, setFormMode] = useState<'create' | 'edit' | null>(null)
   const [editingArtist, setEditingArtist] = useState<CrmArtist | null>(null)
   const [notesDrafts, setNotesDrafts] = useState<Record<string, string>>({})
+  const [detailArtist, setDetailArtist] = useState<CrmArtist | null>(null)
 
   const handlerList = useMemo(() => {
     const set = new Set<string>(HANDLERS)
@@ -122,6 +124,12 @@ export const ArtistsPage = () => {
   useEffect(() => {
     if (operatorName) setBulkOwner(operatorName)
   }, [operatorName])
+
+  useEffect(() => {
+    if (!detailArtist) return
+    const fresh = artists.find((a) => a.id === detailArtist.id)
+    if (fresh) setDetailArtist(fresh)
+  }, [artists, detailArtist?.id])
 
   useEffect(() => {
     setStats(data?.stats)
@@ -224,7 +232,10 @@ export const ArtistsPage = () => {
   }
 
   const pageAllSelected = artists.length > 0 && artists.every((artist) => selectedIds.has(artist.id))
-  const openArtist = (artist: CrmArtist) => navigate(`/artists/${artist.id}`)
+  const openArtist = (artist: CrmArtist) => {
+    if (viewMode === 'kanban') setDetailArtist(artist)
+    else navigate(`/artists/${artist.id}`)
+  }
 
   return (
     <>
@@ -328,11 +339,12 @@ export const ArtistsPage = () => {
               onOpen={openArtist}
             />
           ) : viewMode === 'kanban' ? (
-            <ArtistKanban
+            <ArtistStatusFunnel
               artists={artists}
               statusMeta={STATUS_META}
+              stats={data?.stats}
               onUpdate={updateArtist}
-              onOpen={openArtist}
+              onOpenDetail={openArtist}
             />
           ) : (
             <ArtistsTable
@@ -392,6 +404,25 @@ export const ArtistsPage = () => {
           </div>
         </footer>
       )}
+
+      <AnimatePresence>
+        {detailArtist && viewMode === 'kanban' && (
+          <ArtistDetailPanel
+            artist={detailArtist}
+            statusMeta={STATUS_META}
+            onClose={() => setDetailArtist(null)}
+            onEdit={(artist) => {
+              setDetailArtist(null)
+              setEditingArtist(artist)
+              setFormMode('edit')
+            }}
+            onDelete={() => {
+              setDetailArtist(null)
+            }}
+            onUpdate={updateArtist}
+          />
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
       {formMode && (

@@ -146,7 +146,7 @@ export const AppShell = ({
                 type="button"
                 className={`btn btn-icon ${viewMode === 'kanban' ? 'active' : ''}`}
                 onClick={() => onSetView('kanban')}
-                title="לוח"
+                title="משפך סטטוס"
               >
                 <Columns3 size={15} />
               </button>

@@ -10,6 +10,10 @@ import {
 import type { ArtistBucket, SignatureStatus } from '../../data/types'
 import { priorityForStatus } from '../../lib/constants'
 import { useToast } from '../../hooks/useToast'
+import {
+  patchArtistInCache,
+  rollbackArtistCache,
+} from './funnel/optimisticArtistsCache'
 import { artistsKeys } from './useArtistsQuery'
 
 export const useArtistMutations = (operatorName: string | null) => {
@@ -28,11 +32,17 @@ export const useArtistMutations = (operatorName: string | null) => {
   const patchMutation = useMutation({
     mutationFn: ({ id, patch }: { id: string; patch: Partial<CrmArtist> }) =>
       patchArtist(id, withOperatorPatch(patch)),
+    onMutate: async ({ id, patch }) => {
+      await queryClient.cancelQueries({ queryKey: artistsKeys.all })
+      const snapshots = patchArtistInCache(queryClient, id, withOperatorPatch(patch))
+      return { snapshots }
+    },
     onSuccess: async () => {
       await invalidateArtists()
       pushToast('נשמר בהצלחה', 'success')
     },
-    onError: (error) => {
+    onError: (error, _vars, context) => {
+      if (context?.snapshots) rollbackArtistCache(queryClient, context.snapshots)
       pushToast(error instanceof Error ? error.message : 'השמירה נכשלה', 'error')
     },
   })
