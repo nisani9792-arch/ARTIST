@@ -4,7 +4,10 @@ import {
   bulkPatchArtists,
   createArtist,
   deleteArtist,
+  mergeArtists,
   patchArtist,
+  revertArtistVersion,
+  undoArtistChange,
   type CrmArtist,
 } from '../../api/artists'
 import type { ArtistBucket, SignatureStatus } from '../../data/types'
@@ -21,7 +24,10 @@ export const useArtistMutations = (operatorName: string | null) => {
   const { pushToast } = useToast()
 
   const invalidateArtists = async () => {
-    await queryClient.invalidateQueries({ queryKey: artistsKeys.all })
+    await queryClient.invalidateQueries({
+      queryKey: artistsKeys.all,
+      refetchType: 'active',
+    })
   }
 
   const withOperatorPatch = (patch: Partial<CrmArtist>): Partial<CrmArtist> => {
@@ -37,8 +43,9 @@ export const useArtistMutations = (operatorName: string | null) => {
       const snapshots = patchArtistInCache(queryClient, id, withOperatorPatch(patch))
       return { snapshots }
     },
-    onSuccess: async () => {
+    onSuccess: async (_data, { id }) => {
       await invalidateArtists()
+      await queryClient.invalidateQueries({ queryKey: artistsKeys.versions(id) })
       pushToast('נשמר בהצלחה', 'success')
     },
     onError: (error, _vars, context) => {
@@ -114,12 +121,51 @@ export const useArtistMutations = (operatorName: string | null) => {
     },
   })
 
+  const undoMutation = useMutation({
+    mutationFn: (id: string) => undoArtistChange(id),
+    onSuccess: async () => {
+      await invalidateArtists()
+      pushToast('בוטל השינוי האחרון', 'success')
+    },
+    onError: (error) => {
+      pushToast(error instanceof Error ? error.message : 'ביטול נכשל', 'error')
+    },
+  })
+
+  const revertMutation = useMutation({
+    mutationFn: ({ id, versionId }: { id: string; versionId: number }) =>
+      revertArtistVersion(id, versionId),
+    onSuccess: async () => {
+      await invalidateArtists()
+      pushToast('שוחזרה גרסה קודמת', 'success')
+    },
+    onError: (error) => {
+      pushToast(error instanceof Error ? error.message : 'שחזור נכשל', 'error')
+    },
+  })
+
+  const mergeMutation = useMutation({
+    mutationFn: ({ keepId, removeIds }: { keepId: string; removeIds: string[] }) =>
+      mergeArtists(keepId, removeIds),
+    onSuccess: async () => {
+      await invalidateArtists()
+      pushToast('כפילויות אוחדו', 'success')
+    },
+    onError: (error) => {
+      pushToast(error instanceof Error ? error.message : 'איחוד כפילויות נכשל', 'error')
+    },
+  })
+
   return {
     patchMutation,
     createMutation,
     deleteMutation,
     bulkPatchMutation,
     bulkDeleteMutation,
+    undoMutation,
+    revertMutation,
+    mergeMutation,
+    invalidateArtists,
     withOperatorPatch,
   }
 }

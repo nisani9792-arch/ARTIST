@@ -1,5 +1,5 @@
 import { AnimatePresence } from 'framer-motion'
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 import { PageTransition } from '../components/motion/PageTransition'
 import { AppShell } from '../components/AppShell'
@@ -65,7 +65,13 @@ export const CrmLayout = ({ operatorName }: CrmLayoutProps) => {
     [operatorName, setArtistsUi, setBackupHandler, setExportHandler],
   )
 
-  const stats = pageStats ?? statsData
+  const stats = location.pathname.startsWith('/artists') ? (pageStats ?? statsData) : statsData
+
+  useEffect(() => {
+    if (!location.pathname.startsWith('/artists')) {
+      setPageStats(undefined)
+    }
+  }, [location.pathname])
 
   return (
     <AppShell

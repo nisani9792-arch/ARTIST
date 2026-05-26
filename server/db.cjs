@@ -94,6 +94,203 @@ const setupDatabase = async () => {
       last_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
   `
+
+  await sql`
+    CREATE TABLE IF NOT EXISTS artist_versions (
+      id SERIAL PRIMARY KEY,
+      artist_id TEXT NOT NULL REFERENCES artists(id) ON DELETE CASCADE,
+      snapshot JSONB NOT NULL,
+      changed_by TEXT NOT NULL DEFAULT '',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `
+  await sql`CREATE INDEX IF NOT EXISTS artist_versions_artist_idx ON artist_versions (artist_id, created_at DESC)`
+}
+
+const MAX_VERSIONS_PER_ARTIST = 40
+
+const artistNameKey = (nameHe, nameEn) =>
+  `${String(nameHe ?? '').trim().toLowerCase()}::${String(nameEn ?? '').trim().toLowerCase()}`
+
+const saveArtistVersion = async (artistId, operator) => {
+  const current = await getArtistById(artistId)
+  if (!current) return
+
+  await sql`
+    INSERT INTO artist_versions (artist_id, snapshot, changed_by)
+    VALUES (${artistId}, ${JSON.stringify(current)}::jsonb, ${operator ?? ''})
+  `
+
+  await sql`
+    DELETE FROM artist_versions
+    WHERE id IN (
+      SELECT id
+      FROM artist_versions
+      WHERE artist_id = ${artistId}
+      ORDER BY created_at DESC
+      OFFSET ${MAX_VERSIONS_PER_ARTIST}
+    )
+  `
+}
+
+const getArtistVersions = async (artistId, limit = 20) => {
+  const rows = await sql`
+    SELECT id, artist_id, snapshot, changed_by, created_at
+    FROM artist_versions
+    WHERE artist_id = ${artistId}
+    ORDER BY created_at DESC
+    LIMIT ${Math.min(Math.max(1, limit), 40)}
+  `
+
+  return rows.map((row) => ({
+    id: row.id,
+    artistId: row.artist_id,
+    snapshot: row.snapshot,
+    changedBy: row.changed_by ?? '',
+    createdAt: row.created_at,
+  }))
+}
+
+const revertArtistToVersion = async (artistId, versionId, operator) => {
+  const [version] = await sql`
+    SELECT id, artist_id, snapshot
+    FROM artist_versions
+    WHERE id = ${versionId} AND artist_id = ${artistId}
+    LIMIT 1
+  `
+
+  if (!version) {
+    return null
+  }
+
+  await saveArtistVersion(artistId, operator)
+
+  const snap = version.snapshot
+  const artist = await updateArtist(
+    artistId,
+    {
+      nameHe: snap.nameHe,
+      nameEn: snap.nameEn,
+      genres: snap.genres,
+      tags: snap.tags,
+      latestAlbum: snap.latestAlbum,
+      status: snap.status,
+      owner: snap.owner,
+      source: snap.source,
+      notes: snap.notes,
+      priority: snap.priority,
+      bucket: snap.bucket,
+      popularityScore: snap.popularityScore,
+    },
+    operator,
+    { skipVersion: true },
+  )
+
+  return artist
+}
+
+const undoLastArtistChange = async (artistId, operator) => {
+  const versions = await getArtistVersions(artistId, 1)
+  if (versions.length === 0) {
+    return null
+  }
+
+  return revertArtistToVersion(artistId, versions[0].id, operator)
+}
+
+const findDuplicateGroups = async () => {
+  const rows = await sql`
+    SELECT ${artistSelectFields}
+    FROM artists
+    ORDER BY name_he COLLATE "C"
+  `
+
+  const groups = new Map()
+
+  for (const row of rows) {
+    const artist = normalizeArtist(row)
+    const key = artistNameKey(artist.nameHe, artist.nameEn)
+    if (!key || key === '::') continue
+    const list = groups.get(key) ?? []
+    list.push(artist)
+    groups.set(key, list)
+  }
+
+  return [...groups.values()]
+    .filter((artists) => artists.length > 1)
+    .map((artists) => ({
+      key: artistNameKey(artists[0].nameHe, artists[0].nameEn),
+      nameHe: artists[0].nameHe,
+      nameEn: artists[0].nameEn,
+      artists: artists.sort(
+        (a, b) => new Date(b.updatedAt ?? 0).getTime() - new Date(a.updatedAt ?? 0).getTime(),
+      ),
+    }))
+    .sort((a, b) => b.artists.length - a.artists.length)
+}
+
+const uniqueStrings = (lists) => [...new Set(lists.flat().map((s) => String(s).trim()).filter(Boolean))]
+
+const mergeArtists = async (keepId, removeIds, operator) => {
+  if (!Array.isArray(removeIds) || removeIds.length === 0) {
+    throw new Error('No artists selected to merge')
+  }
+
+  const keep = await getArtistById(keepId)
+  if (!keep) {
+    throw new Error('Keep artist not found')
+  }
+
+  const toRemove = removeIds.filter((id) => id !== keepId)
+  if (toRemove.length === 0) {
+    return keep
+  }
+
+  const duplicates = await Promise.all(toRemove.map((id) => getArtistById(id)))
+  const valid = duplicates.filter(Boolean)
+
+  if (valid.length === 0) {
+    throw new Error('No duplicate artists found')
+  }
+
+  await saveArtistVersion(keepId, operator)
+
+  let mergedGenres = [...keep.genres]
+  let mergedTags = [...keep.tags]
+  let mergedNotes = keep.notes
+  let mergedStatus = keep.status
+  let mergedSource = keep.source
+  let mergedAlbum = keep.latestAlbum
+
+  for (const dup of valid) {
+    mergedGenres = uniqueStrings([mergedGenres, dup.genres])
+    mergedTags = uniqueStrings([mergedTags, dup.tags])
+    if (dup.notes && !mergedNotes.includes(dup.notes)) {
+      mergedNotes = mergedNotes ? `${mergedNotes}\n---\n${dup.notes}` : dup.notes
+    }
+    if (dup.status === 'signed') mergedStatus = 'signed'
+    if (dup.source && !mergedSource.includes(dup.source)) {
+      mergedSource = mergedSource ? `${mergedSource}, ${dup.source}` : dup.source
+    }
+    mergedAlbum = mergedAlbum || dup.latestAlbum
+  }
+
+  const updated = await updateArtist(
+    keepId,
+    {
+      genres: mergedGenres,
+      tags: mergedTags,
+      notes: mergedNotes,
+      status: mergedStatus,
+      source: mergedSource,
+      latestAlbum: mergedAlbum,
+    },
+    operator,
+    { skipVersion: true },
+  )
+
+  await bulkDeleteArtists(toRemove)
+  return updated
 }
 
 const normalizeAccess = (row) => ({
@@ -388,7 +585,11 @@ const getFilterOptions = async () => {
   }
 }
 
-const updateArtist = async (id, patch, operator) => {
+const updateArtist = async (id, patch, operator, { skipVersion = false } = {}) => {
+  if (!skipVersion) {
+    await saveArtistVersion(id, operator)
+  }
+
   const effectivePatch = withOperatorOwner(patch, operator)
   const nextStatus = effectivePatch.status
 
@@ -674,16 +875,21 @@ module.exports = {
   createArtist,
   deleteArtist,
   ensureBucketsClassified,
+  findDuplicateGroups,
   getAccessByIp,
   getArtistById,
+  getArtistVersions,
   getFilterOptions,
   getOperatorNameByIp,
   getArtists,
   getBackupPayload,
   getStats,
+  mergeArtists,
   registerOperatorForIp,
+  revertArtistToVersion,
   searchArtists,
   setupDatabase,
+  undoLastArtistChange,
   unlockGateForIp,
   updateArtist,
   upsertArtists,

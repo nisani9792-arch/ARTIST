@@ -11,6 +11,7 @@ import {
 import { ArtistCardGrid } from '../components/ArtistCardGrid'
 import { ArtistFormModal } from '../components/ArtistFormModal'
 import { ArtistDetailPanel } from '../components/ArtistDetailPanel'
+import { ArtistVersionHistory } from '../components/ArtistVersionHistory'
 import { ArtistStatusFunnel } from '../features/artists/funnel/ArtistStatusFunnel'
 import { ArtistSegmentBoard } from '../features/artists/ArtistSegmentBoard'
 import { WorkspaceSettingsPanel } from '../components/WorkspaceSettingsPanel'
@@ -21,7 +22,7 @@ import { ArtistsViewSwitcher } from '../features/artists/ArtistsViewSwitcher'
 import { BulkActionsBar } from '../features/artists/BulkActionsBar'
 import { useArtistFilters } from '../features/artists/useArtistFilters'
 import { useArtistMutations } from '../features/artists/useArtistMutations'
-import { useArtistsPage } from '../features/artists/useArtistsQuery'
+import { useArtistVersions, useArtistsPage } from '../features/artists/useArtistsQuery'
 import { HANDLERS, STATUS_META, priorityForStatus } from '../lib/constants'
 import type { ArtistBucket, SignatureStatus } from '../data/types'
 import type { CrmOutletContext } from './CrmLayout'
@@ -82,8 +83,11 @@ export const ArtistsPage = () => {
   const {
     patchMutation,
     createMutation,
+    deleteMutation,
     bulkPatchMutation,
     bulkDeleteMutation,
+    undoMutation,
+    revertMutation,
   } = useArtistMutations(operatorName)
 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
@@ -94,6 +98,10 @@ export const ArtistsPage = () => {
   const [editingArtist, setEditingArtist] = useState<CrmArtist | null>(null)
   const [notesDrafts, setNotesDrafts] = useState<Record<string, string>>({})
   const [detailArtist, setDetailArtist] = useState<CrmArtist | null>(null)
+  const { data: detailVersions = [], refetch: refetchDetailVersions } = useArtistVersions(
+    detailArtist?.id,
+    Boolean(detailArtist),
+  )
 
   const handlerList = useMemo(() => {
     const set = new Set<string>(HANDLERS)
@@ -244,6 +252,7 @@ export const ArtistsPage = () => {
           סינון
         </button>
         <WorkspaceSettingsPanel
+          operatorName={operatorName}
           onSettingsChange={() => void refetch()}
           onViewModeChange={setViewMode}
         />
@@ -412,9 +421,49 @@ export const ArtistsPage = () => {
               setFormMode('edit')
             }}
             onDelete={() => {
-              setDetailArtist(null)
+              if (
+                !window.confirm(
+                  `למחוק את "${detailArtist.nameHe || detailArtist.nameEn}"?`,
+                )
+              ) {
+                return
+              }
+              deleteMutation.mutate(detailArtist.id, {
+                onSuccess: () => setDetailArtist(null),
+              })
             }}
-            onUpdate={updateArtist}
+            onUpdate={(artistId, patch) => {
+              updateArtist(artistId, patch)
+              void refetchDetailVersions()
+            }}
+            versionHistory={
+              <ArtistVersionHistory
+                versions={detailVersions}
+                undoPending={undoMutation.isPending}
+                revertPending={revertMutation.isPending}
+                onUndoLast={() => {
+                  if (!detailArtist) return
+                  undoMutation.mutate(detailArtist.id, {
+                    onSuccess: (updated) => {
+                      setDetailArtist(updated)
+                      void refetchDetailVersions()
+                    },
+                  })
+                }}
+                onRevert={(versionId) => {
+                  if (!detailArtist) return
+                  revertMutation.mutate(
+                    { id: detailArtist.id, versionId },
+                    {
+                      onSuccess: (updated) => {
+                        setDetailArtist(updated)
+                        void refetchDetailVersions()
+                      },
+                    },
+                  )
+                }}
+              />
+            }
           />
         )}
       </AnimatePresence>

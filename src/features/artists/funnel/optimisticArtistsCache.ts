@@ -17,19 +17,41 @@ type ArtistsListPayload = {
   }
 }
 
+type BucketKey = 'popular' | 'main_bucket' | 'outside_genre'
+
+const bucketStatKey = (bucket: string | undefined): BucketKey | null => {
+  if (bucket === 'popular') return 'popular'
+  if (bucket === 'main') return 'main_bucket'
+  if (bucket === 'outside_genre') return 'outside_genre'
+  return null
+}
+
 const adjustStats = (
   stats: ArtistsListPayload['stats'],
   prevStatus: SignatureStatus | undefined,
   nextStatus: SignatureStatus | undefined,
+  prevBucket: string | undefined,
+  nextBucket: string | undefined,
 ): ArtistsListPayload['stats'] => {
-  if (!stats || !prevStatus || !nextStatus || prevStatus === nextStatus) return stats
+  if (!stats) return stats
   const next = { ...stats }
-  if (prevStatus === 'signed') next.signed = Math.max(0, next.signed - 1)
-  if (prevStatus === 'unsigned') next.unsigned = Math.max(0, next.unsigned - 1)
-  if (prevStatus === 'stuck') next.stuck = Math.max(0, next.stuck - 1)
-  if (nextStatus === 'signed') next.signed += 1
-  if (nextStatus === 'unsigned') next.unsigned += 1
-  if (nextStatus === 'stuck') next.stuck += 1
+
+  if (prevStatus && nextStatus && prevStatus !== nextStatus) {
+    if (prevStatus === 'signed') next.signed = Math.max(0, next.signed - 1)
+    if (prevStatus === 'unsigned') next.unsigned = Math.max(0, next.unsigned - 1)
+    if (prevStatus === 'stuck') next.stuck = Math.max(0, next.stuck - 1)
+    if (nextStatus === 'signed') next.signed += 1
+    if (nextStatus === 'unsigned') next.unsigned += 1
+    if (nextStatus === 'stuck') next.stuck += 1
+  }
+
+  const prevKey = bucketStatKey(prevBucket)
+  const nextKey = bucketStatKey(nextBucket)
+  if (prevKey && nextKey && prevKey !== nextKey) {
+    next[prevKey] = Math.max(0, (next[prevKey] ?? 0) - 1)
+    next[nextKey] = (next[nextKey] ?? 0) + 1
+  }
+
   return next
 }
 
@@ -49,6 +71,8 @@ export const patchArtistInCache = (
       const target = data.artists.find((artist) => artist.id === id)
       const prevStatus = target?.status
       const nextStatus = patch.status ?? prevStatus
+      const prevBucket = target?.bucket
+      const nextBucket = patch.bucket ?? prevBucket
 
       const artists = data.artists.map((artist) =>
         artist.id === id
@@ -60,7 +84,7 @@ export const patchArtistInCache = (
           : artist,
       )
 
-      const stats = adjustStats(data.stats, prevStatus, nextStatus)
+      const stats = adjustStats(data.stats, prevStatus, nextStatus, prevBucket, nextBucket)
 
       queryClient.setQueryData(queryKey, { ...data, artists, stats })
     })

@@ -1,37 +1,30 @@
 import { AnimatePresence } from 'framer-motion'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useNavigate, useOutletContext, useParams } from 'react-router-dom'
 import { ArtistDetailPanel } from '../components/ArtistDetailPanel'
 import { ArtistFormModal } from '../components/ArtistFormModal'
-import { fetchArtistById } from '../api/artists'
+import { ArtistVersionHistory } from '../components/ArtistVersionHistory'
 import { useArtistMutations } from '../features/artists/useArtistMutations'
+import { useArtistDetail, useArtistVersions } from '../features/artists/useArtistsQuery'
 import { HANDLERS, STATUS_META, priorityForStatus } from '../lib/constants'
 import type { CrmOutletContext } from './CrmLayout'
-import type { CrmArtist } from '../types'
 
 export const ArtistDetailPage = () => {
   const { id } = useParams()
   const navigate = useNavigate()
   const { operatorName } = useOutletContext<CrmOutletContext>()
-  const { patchMutation, deleteMutation } = useArtistMutations(operatorName)
-  const [artist, setArtist] = useState<CrmArtist | null>(null)
-  const [loading, setLoading] = useState(true)
+  const { patchMutation, deleteMutation, undoMutation, revertMutation } =
+    useArtistMutations(operatorName)
+  const { data: artist, isLoading, refetch } = useArtistDetail(id)
+  const { data: versions = [], isLoading: versionsLoading, refetch: refetchVersions } =
+    useArtistVersions(id)
   const [formOpen, setFormOpen] = useState(false)
 
-  useEffect(() => {
-    if (!id) return
-    setLoading(true)
-    fetchArtistById(id)
-      .then(setArtist)
-      .catch(() => setArtist(null))
-      .finally(() => setLoading(false))
-  }, [id])
-
-  if (loading) {
+  if (isLoading) {
     return <div className="empty-state">טוען פרטי אומן...</div>
   }
 
-  if (!artist) {
+  if (!artist || !id) {
     return (
       <div className="empty-state">
         לא נמצא אומן
@@ -49,9 +42,16 @@ export const ArtistDetailPage = () => {
       <ArtistDetailPanel
         artist={artist}
         statusMeta={STATUS_META}
-        onUpdate={(id, patch) => {
-          patchMutation.mutate({ id, patch })
-          setArtist((current) => (current ? { ...current, ...patch } : current))
+        onUpdate={(artistId, patch) => {
+          patchMutation.mutate(
+            { id: artistId, patch },
+            {
+              onSuccess: () => {
+                void refetch()
+                void refetchVersions()
+              },
+            },
+          )
         }}
         onClose={() => navigate('/artists')}
         onEdit={() => setFormOpen(true)}
@@ -61,28 +61,56 @@ export const ArtistDetailPage = () => {
             onSuccess: () => navigate('/artists'),
           })
         }}
+        versionHistory={
+          <ArtistVersionHistory
+            versions={versions}
+            loading={versionsLoading}
+            undoPending={undoMutation.isPending}
+            revertPending={revertMutation.isPending}
+            onUndoLast={() => {
+              undoMutation.mutate(id, {
+                onSuccess: () => {
+                  void refetch()
+                  void refetchVersions()
+                },
+              })
+            }}
+            onRevert={(versionId) => {
+              revertMutation.mutate(
+                { id, versionId },
+                {
+                  onSuccess: () => {
+                    void refetch()
+                    void refetchVersions()
+                  },
+                },
+              )
+            }}
+          />
+        }
       />
 
       <AnimatePresence>
-      {formOpen && (
-        <ArtistFormModal
-          mode="edit"
-          artist={artist}
-          handlers={handlers}
-          onClose={() => setFormOpen(false)}
-          onSave={async (payload) => {
-            const updated = await patchMutation.mutateAsync({
-              id: artist.id,
-              patch: {
-                ...payload,
-                priority: priorityForStatus(payload.status ?? artist.status),
-              },
-            })
-            setArtist(updated)
-            setFormOpen(false)
-          }}
-        />
-      )}
+        {formOpen && (
+          <ArtistFormModal
+            mode="edit"
+            artist={artist}
+            handlers={handlers}
+            onClose={() => setFormOpen(false)}
+            onSave={async (payload) => {
+              await patchMutation.mutateAsync({
+                id: artist.id,
+                patch: {
+                  ...payload,
+                  priority: priorityForStatus(payload.status ?? artist.status),
+                },
+              })
+              await refetch()
+              await refetchVersions()
+              setFormOpen(false)
+            }}
+          />
+        )}
       </AnimatePresence>
     </>
   )

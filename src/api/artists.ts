@@ -167,6 +167,58 @@ export const bulkDeleteArtists = async (ids: string[]) => {
   return response.ids
 }
 
+export type ArtistVersion = {
+  id: number
+  artistId: string
+  snapshot: CrmArtist
+  changedBy: string
+  createdAt: string
+}
+
+export type DuplicateGroup = {
+  key: string
+  nameHe: string
+  nameEn: string
+  artists: CrmArtist[]
+}
+
+export const fetchArtistVersions = async (id: string) => {
+  const response = await request<{ versions: ArtistVersion[] }>(
+    `/api/artists/${encodeURIComponent(id)}/versions`,
+  )
+  return response.versions
+}
+
+export const undoArtistChange = async (id: string) => {
+  const response = await request<ArtistResponse>(`/api/artists/${encodeURIComponent(id)}/undo`, {
+    method: 'POST',
+  })
+  return response.artist
+}
+
+export const revertArtistVersion = async (id: string, versionId: number) => {
+  const response = await request<ArtistResponse>(
+    `/api/artists/${encodeURIComponent(id)}/revert/${versionId}`,
+    { method: 'POST' },
+  )
+  return response.artist
+}
+
+export const fetchDuplicateGroups = async () => {
+  const response = await request<{ groups: DuplicateGroup[]; count: number }>(
+    '/api/artists/duplicates',
+  )
+  return response
+}
+
+export const mergeArtists = async (keepId: string, removeIds: string[]) => {
+  const response = await request<ArtistResponse>('/api/artists/merge', {
+    method: 'POST',
+    body: JSON.stringify({ keepId, removeIds }),
+  })
+  return response.artist
+}
+
 export type BackupPayload = {
   version: number
   exportedAt: string

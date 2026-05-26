@@ -1,6 +1,6 @@
 import { AnimatePresence } from 'framer-motion'
 import { Pencil, Trash2, X } from 'lucide-react'
-import { useEffect } from 'react'
+import { useEffect, type ReactNode } from 'react'
 import { ArtistBucketSelect } from '../features/artists/ArtistBucketSelect'
 import type { SignatureStatus } from '../data/types'
 import type { CrmArtist } from '../types'
@@ -17,6 +17,7 @@ type ArtistDetailPanelProps = {
   onEdit: (artist: CrmArtist) => void
   onDelete: (artist: CrmArtist) => void
   onUpdate?: (id: string, patch: Partial<CrmArtist>) => void
+  versionHistory?: ReactNode
 }
 
 export const ArtistDetailPanel = ({
@@ -26,6 +27,7 @@ export const ArtistDetailPanel = ({
   onEdit,
   onDelete,
   onUpdate,
+  versionHistory,
 }: ArtistDetailPanelProps) => {
   const meta = statusMeta[artist.status]
   const displayName = artist.nameHe || artist.nameEn || 'ללא שם'
@@ -109,6 +111,8 @@ export const ArtistDetailPanel = ({
               </p>
             </div>
           )}
+
+          {versionHistory}
         </div>
 
         <footer className="detail-footer">

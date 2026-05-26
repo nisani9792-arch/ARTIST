@@ -1,6 +1,7 @@
+import { useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { WorkspaceSettingsPanel } from '../components/WorkspaceSettingsPanel'
-import { useArtistsPage } from '../features/artists/useArtistsQuery'
+import { artistsKeys, useArtistsPage } from '../features/artists/useArtistsQuery'
 import { BUCKET_META, loadWorkspaceSettings } from '../lib/artistBuckets'
 import { HANDLERS, STATUS_META } from '../lib/constants'
 import type { CrmArtist } from '../types'
@@ -10,9 +11,14 @@ type DashboardPageProps = {
 }
 
 export const DashboardPage = ({ operatorName }: DashboardPageProps) => {
+  const queryClient = useQueryClient()
   const layout = loadWorkspaceSettings().dashboardLayout
-  const { data: statsData, refetch } = useArtistsPage({ page: 1, limit: 1 })
+  const { data: statsData } = useArtistsPage({ page: 1, limit: 1 })
   const stats = statsData?.stats
+
+  const refreshDashboard = () => {
+    void queryClient.invalidateQueries({ queryKey: artistsKeys.all, refetchType: 'active' })
+  }
 
   const { data: myQueueData } = useArtistsPage({
     myQueue: true,
@@ -30,7 +36,7 @@ export const DashboardPage = ({ operatorName }: DashboardPageProps) => {
           <h1>שלום, {operatorName}</h1>
           <p>סקירה מהירה של מצב האומנים במערכת</p>
         </div>
-        <WorkspaceSettingsPanel onSettingsChange={() => void refetch()} />
+        <WorkspaceSettingsPanel onSettingsChange={refreshDashboard} operatorName={operatorName} />
       </section>
 
       <section className="dashboard-stats-grid">

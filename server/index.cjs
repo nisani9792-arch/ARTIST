@@ -11,15 +11,20 @@ const {
   createArtist,
   deleteArtist,
   ensureBucketsClassified,
+  findDuplicateGroups,
   getAccessByIp,
   getArtistById,
+  getArtistVersions,
   getArtists,
   getBackupPayload,
   getFilterOptions,
   getStats,
+  mergeArtists,
   registerOperatorForIp,
+  revertArtistToVersion,
   searchArtists,
   setupDatabase,
+  undoLastArtistChange,
   unlockGateForIp,
   updateArtist,
   verifyGateUnlock,
@@ -165,12 +170,85 @@ app.get('/api/artists/filters', requireAccess, async (_req, res, next) => {
   }
 })
 
+app.get('/api/artists/duplicates', requireAccess, async (_req, res, next) => {
+  try {
+    const groups = await findDuplicateGroups()
+    res.setHeader('Cache-Control', 'private, no-cache')
+    res.json({ groups, count: groups.length })
+  } catch (error) {
+    next(error)
+  }
+})
+
+app.post('/api/artists/merge', requireAccess, async (req, res, next) => {
+  try {
+    const keepId = String(req.body?.keepId ?? '').trim()
+    const removeIds = Array.isArray(req.body?.removeIds) ? req.body.removeIds : []
+
+    if (!keepId || removeIds.length === 0) {
+      res.status(400).json({ error: 'keepId and removeIds are required' })
+      return
+    }
+
+    const artist = await mergeArtists(keepId, removeIds, req.operatorName)
+    res.json({ artist })
+  } catch (error) {
+    if (error.message === 'Keep artist not found' || error.message === 'No duplicate artists found') {
+      res.status(404).json({ error: error.message })
+      return
+    }
+    next(error)
+  }
+})
+
 app.post('/api/artists/classify-buckets', requireAccess, async (req, res, next) => {
   try {
     const popularLimit = Number(req.body?.popularLimit ?? req.query?.popularLimit ?? 20)
     const result = await classifyArtistBucketsInDb(popularLimit)
     const stats = await getStats()
     res.json({ ...result, stats })
+  } catch (error) {
+    next(error)
+  }
+})
+
+app.get('/api/artists/:id/versions', requireAccess, async (req, res, next) => {
+  try {
+    const artist = await getArtistById(req.params.id)
+    if (!artist) {
+      res.status(404).json({ error: 'Artist not found' })
+      return
+    }
+
+    const versions = await getArtistVersions(req.params.id)
+    res.json({ versions })
+  } catch (error) {
+    next(error)
+  }
+})
+
+app.post('/api/artists/:id/undo', requireAccess, async (req, res, next) => {
+  try {
+    const artist = await undoLastArtistChange(req.params.id, req.operatorName)
+    if (!artist) {
+      res.status(404).json({ error: 'No previous version to restore' })
+      return
+    }
+    res.json({ artist })
+  } catch (error) {
+    next(error)
+  }
+})
+
+app.post('/api/artists/:id/revert/:versionId', requireAccess, async (req, res, next) => {
+  try {
+    const versionId = Number(req.params.versionId)
+    const artist = await revertArtistToVersion(req.params.id, versionId, req.operatorName)
+    if (!artist) {
+      res.status(404).json({ error: 'Version not found' })
+      return
+    }
+    res.json({ artist })
   } catch (error) {
     next(error)
   }

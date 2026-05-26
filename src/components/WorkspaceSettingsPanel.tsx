@@ -1,6 +1,10 @@
+import { useQueryClient } from '@tanstack/react-query'
 import { Settings2 } from 'lucide-react'
 import { useState } from 'react'
 import { classifyArtistBuckets } from '../api/artists'
+import { artistsKeys, useDuplicateGroups } from '../features/artists/useArtistsQuery'
+import { useArtistMutations } from '../features/artists/useArtistMutations'
+import { DuplicatesPanel } from './DuplicatesPanel'
 import {
   DEFAULT_WORKSPACE_SETTINGS,
   POPULAR_LIMIT_OPTIONS,
@@ -11,18 +15,25 @@ import {
 import type { ViewMode } from '../types'
 
 type WorkspaceSettingsPanelProps = {
-  onSettingsChange: (settings: WorkspaceSettings) => void
+  onSettingsChange: (settings?: WorkspaceSettings) => void
   onViewModeChange?: (mode: ViewMode) => void
+  operatorName?: string | null
 }
 
 export const WorkspaceSettingsPanel = ({
   onSettingsChange,
   onViewModeChange,
+  operatorName = null,
 }: WorkspaceSettingsPanelProps) => {
+  const queryClient = useQueryClient()
+  const { mergeMutation } = useArtistMutations(operatorName)
   const [open, setOpen] = useState(false)
+  const [dupesEnabled, setDupesEnabled] = useState(false)
   const [settings, setSettings] = useState(loadWorkspaceSettings)
   const [classifying, setClassifying] = useState(false)
   const [message, setMessage] = useState('')
+  const { data: dupesData, isLoading: dupesLoading, refetch: refetchDupes } =
+    useDuplicateGroups(dupesEnabled)
 
   const apply = (next: WorkspaceSettings) => {
     setSettings(next)
@@ -36,6 +47,8 @@ export const WorkspaceSettingsPanel = ({
     setMessage('')
     try {
       const result = await classifyArtistBuckets(settings.popularLimit)
+      await queryClient.invalidateQueries({ queryKey: artistsKeys.all, refetchType: 'active' })
+      onSettingsChange()
       setMessage(`סווגו ${result.updated.toLocaleString('he-IL')} אומנים (טופ ${result.popularLimit})`)
     } catch {
       setMessage('סיווג אוטומטי נכשל — נסו שוב')
@@ -129,6 +142,27 @@ export const WorkspaceSettingsPanel = ({
               איפוס
             </button>
           </div>
+
+          <DuplicatesPanel
+            groups={dupesData?.groups ?? []}
+            loading={dupesLoading}
+            mergePending={mergeMutation.isPending}
+            onRefresh={() => {
+              setDupesEnabled(true)
+              void refetchDupes()
+            }}
+            onMerge={(keepId, removeIds) => {
+              mergeMutation.mutate(
+                { keepId, removeIds },
+                {
+                  onSuccess: () => {
+                    void refetchDupes()
+                    onSettingsChange()
+                  },
+                },
+              )
+            }}
+          />
 
           {message && <p className="workspace-settings-msg">{message}</p>}
         </div>
