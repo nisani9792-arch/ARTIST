@@ -1,9 +1,13 @@
+import { useCallback, useEffect } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
+import { useOutletContext } from 'react-router-dom'
+import { downloadBackup } from '../api/artists'
 import { Link } from 'react-router-dom'
 import { WorkspaceSettingsPanel } from '../components/WorkspaceSettingsPanel'
 import { artistsKeys, useArtistsPage } from '../features/artists/useArtistsQuery'
 import { BUCKET_META, loadWorkspaceSettings } from '../lib/artistBuckets'
 import { HANDLERS, STATUS_META } from '../lib/constants'
+import type { CrmOutletContext } from './CrmLayout'
 import type { CrmArtist } from '../types'
 
 type DashboardPageProps = {
@@ -11,7 +15,16 @@ type DashboardPageProps = {
 }
 
 export const DashboardPage = ({ operatorName }: DashboardPageProps) => {
+  const { setBackupHandler } = useOutletContext<CrmOutletContext>()
   const queryClient = useQueryClient()
+
+  const runBackup = useCallback(async () => {
+    await downloadBackup()
+  }, [])
+
+  useEffect(() => {
+    setBackupHandler(runBackup)
+  }, [runBackup, setBackupHandler])
   const layout = loadWorkspaceSettings().dashboardLayout
   const { data: statsData } = useArtistsPage({ page: 1, limit: 1 })
   const stats = statsData?.stats

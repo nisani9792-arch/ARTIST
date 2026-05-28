@@ -6,7 +6,7 @@ type MobileBottomBarProps = {
   onNavigateArtists: () => void
   onToggleSearch: () => void
   onNewArtist: () => void
-  onBackup: () => void
+  onBackup?: () => void
 }
 
 export const MobileBottomBar = ({
@@ -44,10 +44,12 @@ export const MobileBottomBar = ({
         <Plus size={22} />
         <span>חדש</span>
       </button>
-      <button type="button" className="mobile-nav-btn" onClick={onBackup}>
-        <Database size={20} />
-        <span>גיבוי</span>
-      </button>
+      {onBackup && (
+        <button type="button" className="mobile-nav-btn" onClick={onBackup}>
+          <Database size={20} />
+          <span>גיבוי</span>
+        </button>
+      )}
     </nav>
   )
 }

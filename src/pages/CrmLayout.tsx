@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 import { PageTransition } from '../components/motion/PageTransition'
 import { AppShell } from '../components/AppShell'
+import { ArtistAiChat } from '../components/ArtistAiChat'
 import { useArtistStats } from '../features/artists/useArtistsQuery'
 import type { HeaderStats } from '../api/artists'
 import type { ViewMode } from '../types'
@@ -92,6 +93,8 @@ export const CrmLayout = ({ operatorName }: CrmLayoutProps) => {
           <Outlet context={outletContext} />
         </PageTransition>
       </AnimatePresence>
+
+      <ArtistAiChat operatorName={operatorName} />
     </AppShell>
   )
 }

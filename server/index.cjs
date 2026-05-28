@@ -30,6 +30,7 @@ const {
   verifyGateUnlock,
 } = require('./db.cjs')
 const { createRequireAccess } = require('./middleware/requireAccess.cjs')
+const { runArtistAiChat, isGeminiConfigured } = require('./artistAiAgent.cjs')
 
 const app = express()
 app.set('trust proxy', true)
@@ -84,6 +85,14 @@ const unlockLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Too many unlock attempts' },
+})
+
+const aiChatLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 45,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many AI requests' },
 })
 
 const parseSearchQuery = (req) => ({
@@ -305,6 +314,31 @@ app.get('/api/backup', requireAccess, async (_req, res, next) => {
     res.setHeader('Content-Type', 'application/json; charset=utf-8')
     res.setHeader('Content-Disposition', `attachment; filename="artist-backup-${stamp}.json"`)
     res.json(backup)
+  } catch (error) {
+    next(error)
+  }
+})
+
+app.get('/api/ai/status', requireAccess, (_req, res) => {
+  res.json({ configured: isGeminiConfigured() })
+})
+
+app.post('/api/ai/chat', requireAccess, aiChatLimiter, async (req, res, next) => {
+  try {
+    const message = String(req.body?.message ?? '').trim()
+    if (!message) {
+      res.status(400).json({ error: 'Message is required' })
+      return
+    }
+
+    const history = Array.isArray(req.body?.history) ? req.body.history : []
+    const result = await runArtistAiChat({
+      message,
+      history,
+      operatorName: req.operatorName,
+    })
+
+    res.json(result)
   } catch (error) {
     next(error)
   }

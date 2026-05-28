@@ -203,10 +203,12 @@ export const AppShell = ({
             </button>
           )}
 
-          <button className="btn btn-ghost desktop-only" type="button" onClick={() => void handleBackup()}>
-            <Database size={14} />
-            גיבוי
-          </button>
+          {onBackup && (
+            <button className="btn btn-ghost desktop-only" type="button" onClick={() => void handleBackup()}>
+              <Database size={14} />
+              גיבוי
+            </button>
+          )}
 
       {onNewArtist && (
         <button className="btn btn-primary desktop-only" type="button" onClick={onNewArtist}>
@@ -227,12 +229,6 @@ export const AppShell = ({
         </div>
       </header>
 
-      <div className="header-utility-bar">
-        <button className="btn btn-ghost btn-sm" type="button" onClick={() => void handleBackup()}>
-          <Database size={14} />
-          הורד גיבוי
-        </button>
-      </div>
       </div>
 
       {children}
@@ -246,7 +242,7 @@ export const AppShell = ({
         }}
         onToggleSearch={() => onToggleSearch?.()}
         onNewArtist={() => (onNewArtist ? onNewArtist() : navigate('/artists?view=kanban'))}
-        onBackup={() => void handleBackup()}
+        onBackup={onBackup ? () => void handleBackup() : undefined}
       />
     </div>
   )
