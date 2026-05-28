@@ -1,7 +1,10 @@
 import type { SignatureStatus } from '../data/types'
 
+export const SIGNED_DEFAULT_HANDLER = 'אלעזר מרקס'
+
 export const HANDLERS = [
   'לא שויך',
+  SIGNED_DEFAULT_HANDLER,
   'שימון',
   'ניהול זכויות',
   'סוכן חיצוני',

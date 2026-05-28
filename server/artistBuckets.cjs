@@ -266,6 +266,8 @@ const popularityScore = (artist) => {
 }
 
 const isOutsideGenreArtist = (artist) => {
+  if (artist._forceOutside === true) return true
+
   const nameHe = normalizeName(artist.nameHe ?? artist.name_he)
   if (OUTSIDE_GENRE_NAME_SET.has(nameHe)) return true
 

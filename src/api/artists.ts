@@ -25,6 +25,7 @@ export type ArtistFilters = {
   tag?: string
   genre?: string
   bucket?: ArtistBucket | 'all'
+  audience?: 'all' | 'religious' | 'secular' | 'mixed'
   needsAction?: boolean
   myQueue?: boolean
   sort?: 'smart' | 'name' | 'status' | 'tags' | 'bucket'
@@ -74,6 +75,7 @@ const buildSearchParams = (filters: ArtistFilters = {}) => {
   if (filters.tag && filters.tag !== 'all') params.set('tag', filters.tag)
   if (filters.genre && filters.genre !== 'all') params.set('genre', filters.genre)
   if (filters.bucket && filters.bucket !== 'all') params.set('bucket', filters.bucket)
+  if (filters.audience && filters.audience !== 'all') params.set('audience', filters.audience)
   if (filters.needsAction) params.set('needsAction', 'true')
   if (filters.myQueue) params.set('myQueue', 'true')
   if (filters.sort) params.set('sort', filters.sort)
@@ -261,12 +263,18 @@ export const exportArtistsCsv = (artists: CrmArtist[], filename = 'artist-crm-ex
     'שם באנגלית',
     'סטטוס',
     'קטגוריה',
+    'קהל AI',
     'גורם מטפל',
     'זאנרים',
     'תגיות',
     'אלבום',
     'הערות',
   ]
+  const audienceLabels = {
+    religious: 'דתי',
+    secular: 'חילוני',
+    mixed: 'מעורב',
+  }
   const bucketLabels = {
     popular: 'פופולרי',
     main: 'שאר',
@@ -277,8 +285,9 @@ export const exportArtistsCsv = (artists: CrmArtist[], filename = 'artist-crm-ex
     artist.nameHe,
     artist.nameEn,
     statusLabels[artist.status],
-    artist.owner,
     bucketLabels[artist.bucket ?? 'main'],
+    artist.audienceType ? audienceLabels[artist.audienceType] : '',
+    artist.owner,
     artist.genres,
     artist.tags,
     artist.latestAlbum,

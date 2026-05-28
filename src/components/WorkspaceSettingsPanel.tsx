@@ -105,6 +105,7 @@ export const WorkspaceSettingsPanel = ({
               <option value="cards">כרטיסיות</option>
               <option value="table">טבלה</option>
               <option value="kanban">משפך סטטוס</option>
+              <option value="multi">צפייה מקבילה</option>
             </select>
           </label>
 

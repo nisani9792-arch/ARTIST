@@ -1,7 +1,8 @@
 import { Search } from 'lucide-react'
 import type { FilterOptions } from '../../api/artists'
 import { BUCKET_META } from '../../lib/artistBuckets'
-import type { BucketFilter, SortOption, StatusFilter } from '../../types'
+import { Download } from 'lucide-react'
+import type { AudienceFilter, BucketFilter, SortOption, StatusFilter } from '../../types'
 
 type ArtistsToolbarProps = {
   query: string
@@ -10,7 +11,9 @@ type ArtistsToolbarProps = {
   tagFilter: string
   genreFilter: string
   bucketFilter: BucketFilter
+  audienceFilter: AudienceFilter
   needsActionOnly: boolean
+  filteredTotal: number
   myQueue: boolean
   sortBy: SortOption
   filterOptions?: FilterOptions
@@ -23,6 +26,8 @@ type ArtistsToolbarProps = {
   onTagFilterChange: (value: string) => void
   onGenreFilterChange: (value: string) => void
   onBucketFilterChange: (value: BucketFilter) => void
+  onAudienceFilterChange: (value: AudienceFilter) => void
+  onExportFiltered: () => void
   onNeedsActionChange: (value: boolean) => void
   onMyQueueChange: (value: boolean) => void
   onSortChange: (value: SortOption) => void
@@ -36,7 +41,9 @@ export const ArtistsToolbar = ({
   tagFilter,
   genreFilter,
   bucketFilter,
+  audienceFilter,
   needsActionOnly,
+  filteredTotal,
   myQueue,
   sortBy,
   filterOptions,
@@ -49,6 +56,8 @@ export const ArtistsToolbar = ({
   onTagFilterChange,
   onGenreFilterChange,
   onBucketFilterChange,
+  onAudienceFilterChange,
+  onExportFiltered,
   onNeedsActionChange,
   onMyQueueChange,
   onSortChange,
@@ -82,6 +91,26 @@ export const ArtistsToolbar = ({
               type="button"
               className={`chip-filter bucket-chip ${bucketFilter === value ? 'active' : ''}`}
               onClick={() => onBucketFilterChange(value)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        <div className="quick-filters" role="group" aria-label="קהל (AI)">
+          {(
+            [
+              ['all', 'כל הקהל'],
+              ['religious', 'דתי'],
+              ['secular', 'חילוני'],
+              ['mixed', 'מעורב'],
+            ] as const
+          ).map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              className={`chip-filter audience-chip ${audienceFilter === value ? 'active' : ''}`}
+              onClick={() => onAudienceFilterChange(value)}
             >
               {label}
             </button>
@@ -158,7 +187,12 @@ export const ArtistsToolbar = ({
         </label>
 
         <button className="btn btn-ghost" type="button" onClick={onSelectAllFiltered}>
-          בחר את כל התוצאות
+          בחר את כל התוצאות ({filteredTotal.toLocaleString('he-IL')})
+        </button>
+
+        <button className="btn btn-ghost" type="button" onClick={onExportFiltered}>
+          <Download size={14} />
+          הורד רשימה מסוננת
         </button>
       </div>
 

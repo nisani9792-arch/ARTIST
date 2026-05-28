@@ -36,7 +36,7 @@ export const WORKSPACE_SETTINGS_KEY = 'artist-workspace-settings'
 
 export type WorkspaceSettings = {
   popularLimit: PopularLimitOption
-  defaultViewMode: 'segments' | 'cards' | 'table' | 'kanban'
+  defaultViewMode: 'segments' | 'cards' | 'table' | 'kanban' | 'multi'
   dashboardLayout: 'compact' | 'comfortable' | 'spacious'
 }
 
@@ -61,7 +61,8 @@ export const loadWorkspaceSettings = (): WorkspaceSettings => {
       parsed.defaultViewMode === 'cards' ||
       parsed.defaultViewMode === 'table' ||
       parsed.defaultViewMode === 'kanban' ||
-      parsed.defaultViewMode === 'segments'
+      parsed.defaultViewMode === 'segments' ||
+      parsed.defaultViewMode === 'multi'
         ? parsed.defaultViewMode
         : DEFAULT_WORKSPACE_SETTINGS.defaultViewMode
 

@@ -1,5 +1,16 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { Database, Download, LayoutGrid, Plus, RefreshCw, Table2, Columns3, Layers3 } from 'lucide-react'
+import {
+  Database,
+  Download,
+  LayoutGrid,
+  Plus,
+  RefreshCw,
+  Table2,
+  Columns3,
+  Layers3,
+  PanelRight,
+} from 'lucide-react'
+import type { ViewMode } from '../types'
 import { APP_NAME } from '../lib/branding'
 import { JusicLogo } from './JusicLogo'
 import { InstallPrompt } from './InstallPrompt'
@@ -14,13 +25,13 @@ type AppShellProps = {
   operatorName: string
   stats?: HeaderStats
   saveStatus: 'idle' | 'loading' | 'saving' | 'error'
-  viewMode?: 'segments' | 'cards' | 'table' | 'kanban'
+  viewMode?: ViewMode
   searchOpen?: boolean
   onRefresh?: () => void
   onExport?: () => void
   onBackup?: () => void
   onNewArtist?: () => void
-  onSetView?: (mode: 'segments' | 'cards' | 'table' | 'kanban') => void
+  onSetView?: (mode: ViewMode) => void
   onToggleSearch?: () => void
   backupMessage?: string
   children: ReactNode
@@ -149,6 +160,14 @@ export const AppShell = ({
                 title="טבלה"
               >
                 <Table2 size={15} />
+              </button>
+              <button
+                type="button"
+                className={`btn btn-icon ${viewMode === 'multi' ? 'active' : ''}`}
+                onClick={() => onSetView('multi')}
+                title="צפייה מקבילה"
+              >
+                <PanelRight size={15} />
               </button>
             </div>
           )}

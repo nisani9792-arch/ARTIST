@@ -49,6 +49,7 @@ const normalizeArtist = (artist) => ({
   priority: artist.priority ?? '',
   bucket: artist.bucket ?? 'main',
   popularityScore: Number(artist.popularity_score ?? 0),
+  audienceType: artist.audience_type ?? 'mixed',
   updatedAt: artist.updated_at,
   updatedBy: artist.updated_by ?? '',
 })
@@ -77,7 +78,9 @@ const setupDatabase = async () => {
   await sql`ALTER TABLE artists ADD COLUMN IF NOT EXISTS updated_by TEXT NOT NULL DEFAULT ''`
   await sql`ALTER TABLE artists ADD COLUMN IF NOT EXISTS bucket TEXT NOT NULL DEFAULT 'main'`
   await sql`ALTER TABLE artists ADD COLUMN IF NOT EXISTS popularity_score INT NOT NULL DEFAULT 0`
+  await sql`ALTER TABLE artists ADD COLUMN IF NOT EXISTS audience_type TEXT NOT NULL DEFAULT 'mixed'`
   await sql`CREATE INDEX IF NOT EXISTS artists_bucket_idx ON artists (bucket)`
+  await sql`CREATE INDEX IF NOT EXISTS artists_audience_idx ON artists (audience_type)`
 
   await sql`CREATE INDEX IF NOT EXISTS artists_status_idx ON artists (status)`
   await sql`CREATE INDEX IF NOT EXISTS artists_owner_idx ON artists (owner)`
@@ -382,6 +385,7 @@ const artistSelectFields = sql`
   priority,
   bucket,
   popularity_score,
+  audience_type,
   updated_at,
   updated_by
 `
@@ -442,6 +446,7 @@ const buildSearchFilters = ({
   tag,
   genre,
   bucket,
+  audience,
   needsAction,
   myQueue,
   operatorName,
@@ -453,6 +458,8 @@ const buildSearchFilters = ({
   const tagValue = tag === 'all' ? null : tag
   const genreValue = genre === 'all' ? null : genre
   const bucketValue = bucket === 'all' ? null : bucket
+  const audienceValue =
+    audience === 'religious' || audience === 'secular' || audience === 'mixed' ? audience : null
   const needsActionFlag = Boolean(needsAction)
   const myQueueFlag = Boolean(myQueue)
   const queueOwner = operatorName ?? ''
@@ -464,6 +471,7 @@ const buildSearchFilters = ({
     tagValue,
     genreValue,
     bucketValue,
+    audienceValue,
     needsActionFlag,
     myQueueFlag,
     queueOwner,
@@ -476,6 +484,7 @@ const whereClause = (filters) => sql`
   AND (${filters.tagValue}::text IS NULL OR ${filters.tagValue} = ANY(tags))
   AND (${filters.genreValue}::text IS NULL OR ${filters.genreValue} = ANY(genres))
   AND (${filters.bucketValue}::text IS NULL OR bucket = ${filters.bucketValue})
+  AND (${filters.audienceValue}::text IS NULL OR audience_type = ${filters.audienceValue})
   AND (
     ${!filters.needsActionFlag}::boolean
     OR status <> 'signed'
@@ -747,6 +756,67 @@ const bulkUpdateArtists = async ({ ids, status, owner, priority, bucket }, opera
   return rows.map(normalizeArtist)
 }
 
+const replaceAllArtists = async (artists) => {
+  await setupDatabase()
+  await sql`DELETE FROM artist_versions`
+  await sql`DELETE FROM artists`
+
+  const chunkSize = 40
+  let inserted = 0
+
+  for (let index = 0; index < artists.length; index += chunkSize) {
+    const chunk = artists.slice(index, index + chunkSize)
+    await Promise.all(
+      chunk.map((artist) => {
+        const genres = parseTagList(artist.genres)
+        const tags = parseTagList(artist.tags)
+        const audienceType = artist.audienceType ?? artist.audience_type ?? 'mixed'
+        const bucket = allowedBuckets.has(artist.bucket) ? artist.bucket : 'main'
+
+        return sql`
+          INSERT INTO artists (
+            id,
+            name_he,
+            name_en,
+            genres,
+            tags,
+            latest_album,
+            status,
+            owner,
+            source,
+            notes,
+            priority,
+            bucket,
+            popularity_score,
+            audience_type,
+            updated_by
+          )
+          VALUES (
+            ${artist.id},
+            ${String(artist.nameHe ?? '').trim()},
+            ${String(artist.nameEn ?? '').trim()},
+            ${genres},
+            ${tags},
+            ${String(artist.latestAlbum ?? '').trim()},
+            ${artist.status},
+            ${artist.owner ?? UNASSIGNED_OWNER},
+            ${String(artist.source ?? '').trim()},
+            ${String(artist.notes ?? '').trim()},
+            ${artist.priority ?? ''},
+            ${bucket},
+            ${Number(artist.popularityScore ?? 0)},
+            ${audienceType},
+            ${'ייבוא מחדש'}
+          )
+        `
+      }),
+    )
+    inserted += chunk.length
+  }
+
+  return { inserted }
+}
+
 const upsertArtists = async (artists) => {
   await setupDatabase()
 
@@ -886,6 +956,7 @@ module.exports = {
   getStats,
   mergeArtists,
   registerOperatorForIp,
+  replaceAllArtists,
   revertArtistToVersion,
   searchArtists,
   setupDatabase,

@@ -1,5 +1,8 @@
 const fs = require('node:fs')
 const ExcelJS = require('exceljs')
+const { enrichArtistsForImport } = require('../server/aiClassifier.cjs')
+
+const SIGNED_HANDLER = 'אלעזר מרקס'
 
 const sources = [
   {
@@ -110,7 +113,7 @@ const readSourceArtists = async () => {
               tags: [],
               latestAlbum: album,
               status: source.status,
-              owner: 'לא שויך',
+              owner: source.status === 'signed' ? SIGNED_HANDLER : 'לא שויך',
               source: source.sourceLabel,
               notes: '',
               priority: source.status === 'signed' ? 'שימור קשר' : 'ליצירת קשר',
@@ -150,7 +153,8 @@ const readSourceArtists = async () => {
     artist.id = count === 0 ? baseId : `${baseId}-${count + 1}`
   }
 
-  return artists
+  const popularLimit = Number(process.env.POPULAR_LIMIT ?? 20)
+  return enrichArtistsForImport(artists, popularLimit)
 }
 
-module.exports = { readSourceArtists }
+module.exports = { readSourceArtists, SIGNED_HANDLER }

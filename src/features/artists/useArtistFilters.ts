@@ -6,13 +6,19 @@ import {
   loadWorkspaceSettings,
   saveWorkspaceSettings,
 } from '../../lib/artistBuckets'
-import type { BucketFilter, SortOption, StatusFilter, ViewMode } from '../../types'
+import type { AudienceFilter, BucketFilter, SortOption, StatusFilter, ViewMode } from '../../types'
 import type { ArtistFilters } from '../../api/artists'
 
 const parseBool = (value: string | null) => value === 'true' || value === '1'
 
 const parseViewMode = (value: string | null): ViewMode | null => {
-  if (value === 'segments' || value === 'cards' || value === 'table' || value === 'kanban') {
+  if (
+    value === 'segments' ||
+    value === 'cards' ||
+    value === 'table' ||
+    value === 'kanban' ||
+    value === 'multi'
+  ) {
     return value
   }
   return null
@@ -35,6 +41,7 @@ export const useArtistFilters = () => {
   const tagFilter = searchParams.get('tag') ?? 'all'
   const genreFilter = searchParams.get('genre') ?? 'all'
   const bucketFilter = (searchParams.get('bucket') ?? 'all') as BucketFilter
+  const audienceFilter = (searchParams.get('audience') ?? 'all') as AudienceFilter
   const needsActionOnly = parseBool(searchParams.get('needsAction'))
   const myQueue = parseBool(searchParams.get('myQueue'))
   const sortBy = (searchParams.get('sort') ?? 'smart') as SortOption
@@ -58,6 +65,7 @@ export const useArtistFilters = () => {
   const setTagFilter = (value: string) => patchParams({ tag: value, page: '1' })
   const setGenreFilter = (value: string) => patchParams({ genre: value, page: '1' })
   const setBucketFilter = (value: BucketFilter) => patchParams({ bucket: value, page: '1' })
+  const setAudienceFilter = (value: AudienceFilter) => patchParams({ audience: value, page: '1' })
   const setNeedsActionOnly = (value: boolean) =>
     patchParams({ needsAction: value ? 'true' : null, page: '1' })
   const setMyQueue = (value: boolean) => {
@@ -93,6 +101,7 @@ export const useArtistFilters = () => {
       tag: tagFilter,
       genre: genreFilter,
       bucket: bucketFilter,
+      audience: audienceFilter,
       needsAction: needsActionOnly,
       myQueue,
       sort: sortBy,
@@ -106,6 +115,7 @@ export const useArtistFilters = () => {
       tagFilter,
       genreFilter,
       bucketFilter,
+      audienceFilter,
       needsActionOnly,
       myQueue,
       sortBy,
@@ -128,6 +138,7 @@ export const useArtistFilters = () => {
     tagFilter,
     genreFilter,
     bucketFilter,
+    audienceFilter,
     needsActionOnly,
     myQueue,
     sortBy,
@@ -140,6 +151,7 @@ export const useArtistFilters = () => {
     setTagFilter,
     setGenreFilter,
     setBucketFilter,
+    setAudienceFilter,
     setNeedsActionOnly,
     setMyQueue,
     setSortBy,

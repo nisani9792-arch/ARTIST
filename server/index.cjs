@@ -93,6 +93,7 @@ const parseSearchQuery = (req) => ({
   tag: req.query.tag ?? 'all',
   genre: req.query.genre ?? 'all',
   bucket: req.query.bucket ?? 'all',
+  audience: req.query.audience ?? 'all',
   needsAction: req.query.needsAction === 'true' || req.query.needsAction === '1',
   myQueue: req.query.myQueue === 'true' || req.query.myQueue === '1',
   sort: req.query.sort ?? 'smart',

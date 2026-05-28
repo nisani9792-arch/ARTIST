@@ -18,6 +18,7 @@ type ArtistDetailPanelProps = {
   onDelete: (artist: CrmArtist) => void
   onUpdate?: (id: string, patch: Partial<CrmArtist>) => void
   versionHistory?: ReactNode
+  variant?: 'modal' | 'inline'
 }
 
 export const ArtistDetailPanel = ({
@@ -28,23 +29,23 @@ export const ArtistDetailPanel = ({
   onDelete,
   onUpdate,
   versionHistory,
+  variant = 'modal',
 }: ArtistDetailPanelProps) => {
   const meta = statusMeta[artist.status]
   const displayName = artist.nameHe || artist.nameEn || 'ללא שם'
   const tagText = [...artist.genres, ...artist.tags].join(' · ')
 
   useEffect(() => {
+    if (variant !== 'modal') return
     const onKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') onClose()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [onClose])
+  }, [onClose, variant])
 
-  return (
-    <AnimatePresence>
-      <MotionBackdrop key="detail-backdrop" onClick={onClose} />
-      <MotionPanel key="detail-panel" aria-label={`פרטי ${displayName}`}>
+  const panelContent = (
+    <>
         <header className="detail-header">
           <div>
             <span className={`badge ${meta.tone}`}>{meta.label}</span>
@@ -73,6 +74,19 @@ export const ArtistDetailPanel = ({
             <span>גורם מטפל</span>
             <p>{artist.owner}</p>
           </div>
+
+          {artist.audienceType && (
+            <div className="detail-field">
+              <span>קהל / סיווג AI</span>
+              <p>
+                {artist.audienceType === 'secular'
+                  ? 'חילוני / מיינסטרים'
+                  : artist.audienceType === 'religious'
+                    ? 'דתי / חסידי'
+                    : 'מעורב'}
+              </p>
+            </div>
+          )}
 
           {artist.latestAlbum && (
             <div className="detail-field">
@@ -125,6 +139,22 @@ export const ArtistDetailPanel = ({
             מחק
           </button>
         </footer>
+    </>
+  )
+
+  if (variant === 'inline') {
+    return (
+      <section className="detail-inline-panel" aria-label={`פרטי ${displayName}`}>
+        {panelContent}
+      </section>
+    )
+  }
+
+  return (
+    <AnimatePresence>
+      <MotionBackdrop key="detail-backdrop" onClick={onClose} />
+      <MotionPanel key="detail-panel" aria-label={`פרטי ${displayName}`}>
+        {panelContent}
       </MotionPanel>
     </AnimatePresence>
   )

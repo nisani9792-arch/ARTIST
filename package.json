@@ -12,6 +12,7 @@
     "import:artists": "node scripts/import-artists.cjs",
     "db:init": "node scripts/init-db.cjs",
     "db:seed": "node scripts/seed-neon.cjs",
+    "db:replace": "node scripts/replace-all-artists.cjs",
     "classify:buckets": "node scripts/classify-artist-buckets.cjs",
     "start": "node server/index.cjs",
     "build": "tsc -b && vite build",

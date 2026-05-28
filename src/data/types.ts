@@ -2,6 +2,8 @@ export type SignatureStatus = 'signed' | 'unsigned' | 'stuck'
 
 export type ArtistBucket = 'popular' | 'main' | 'outside_genre'
 
+export type AudienceType = 'religious' | 'secular' | 'mixed'
+
 export type ArtistRecord = {
   id: string
   nameHe: string
@@ -16,6 +18,7 @@ export type ArtistRecord = {
   priority: string
   bucket: ArtistBucket
   popularityScore?: number
+  audienceType?: AudienceType
   updatedAt?: string
   updatedBy?: string
 }

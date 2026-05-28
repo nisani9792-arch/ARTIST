@@ -23,7 +23,8 @@ import { BulkActionsBar } from '../features/artists/BulkActionsBar'
 import { useArtistFilters } from '../features/artists/useArtistFilters'
 import { useArtistMutations } from '../features/artists/useArtistMutations'
 import { useArtistVersions, useArtistsPage } from '../features/artists/useArtistsQuery'
-import { HANDLERS, STATUS_META, priorityForStatus } from '../lib/constants'
+import { ArtistsMultiView } from '../features/artists/ArtistsMultiView'
+import { HANDLERS, SIGNED_DEFAULT_HANDLER, STATUS_META, priorityForStatus } from '../lib/constants'
 import type { ArtistBucket, SignatureStatus } from '../data/types'
 import type { CrmOutletContext } from './CrmLayout'
 
@@ -51,6 +52,7 @@ export const ArtistsPage = () => {
     tagFilter,
     genreFilter,
     bucketFilter,
+    audienceFilter,
     needsActionOnly,
     myQueue,
     sortBy,
@@ -60,6 +62,7 @@ export const ArtistsPage = () => {
     setTagFilter,
     setGenreFilter,
     setBucketFilter,
+    setAudienceFilter,
     setNeedsActionOnly,
     setMyQueue,
     setSortBy,
@@ -67,11 +70,14 @@ export const ArtistsPage = () => {
 
   const queryFilters = useMemo(
     () =>
-      viewMode === 'kanban' || viewMode === 'segments'
+      viewMode === 'kanban' || viewMode === 'segments' || viewMode === 'multi'
         ? {
             ...apiFilters,
             page: 1,
-            limit: Math.max(limit, viewMode === 'segments' ? 500 : 200),
+            limit: Math.max(
+              limit,
+              viewMode === 'segments' ? 500 : viewMode === 'multi' ? 300 : 200,
+            ),
             sort: viewMode === 'segments' ? ('bucket' as const) : apiFilters.sort,
             bucket: viewMode === 'segments' ? 'all' : apiFilters.bucket,
           }
@@ -98,9 +104,11 @@ export const ArtistsPage = () => {
   const [editingArtist, setEditingArtist] = useState<CrmArtist | null>(null)
   const [notesDrafts, setNotesDrafts] = useState<Record<string, string>>({})
   const [detailArtist, setDetailArtist] = useState<CrmArtist | null>(null)
+  const [multiActiveId, setMultiActiveId] = useState<string | null>(null)
+  const detailId = viewMode === 'multi' ? multiActiveId : detailArtist?.id
   const { data: detailVersions = [], refetch: refetchDetailVersions } = useArtistVersions(
-    detailArtist?.id,
-    Boolean(detailArtist),
+    detailId ?? undefined,
+    Boolean(detailId),
   )
 
   const handlerList = useMemo(() => {
@@ -158,12 +166,25 @@ export const ArtistsPage = () => {
     setFormMode('create')
   }, [])
 
+  const exportByFilters = useCallback(
+    async (exportTotal = total) => {
+      const exportLimit = Math.min(exportTotal || 5000, 5000)
+      if (exportLimit === 0) return
+      const payload = await fetchArtistsPage({ ...apiFilters, page: 1, limit: exportLimit })
+      exportArtistsCsv(payload.artists, `artists-filtered-${exportLimit}.csv`)
+    },
+    [apiFilters, total],
+  )
+
   const runExport = useCallback(async () => {
-    const exportLimit = Math.min(total || 5000, 5000)
-    if (exportLimit === 0) return
-    const payload = await fetchArtistsPage({ ...apiFilters, page: 1, limit: exportLimit })
-    exportArtistsCsv(payload.artists)
-  }, [apiFilters, total])
+    await exportByFilters()
+  }, [exportByFilters])
+
+  const exportSelected = useCallback(() => {
+    const selected = artists.filter((a) => selectedIds.has(a.id))
+    if (selected.length === 0) return
+    exportArtistsCsv(selected, `artists-selected-${selected.length}.csv`)
+  }, [artists, selectedIds])
 
   const runBackup = useCallback(async () => {
     await downloadBackup()
@@ -235,6 +256,7 @@ export const ArtistsPage = () => {
   const pageAllSelected = artists.length > 0 && artists.every((artist) => selectedIds.has(artist.id))
   const openArtist = (artist: CrmArtist) => {
     if (viewMode === 'kanban') setDetailArtist(artist)
+    else if (viewMode === 'multi') setMultiActiveId(artist.id)
     else navigate(`/artists/${artist.id}`)
   }
 
@@ -267,6 +289,8 @@ export const ArtistsPage = () => {
         tagFilter={tagFilter}
         genreFilter={genreFilter}
         bucketFilter={bucketFilter}
+        audienceFilter={audienceFilter}
+        filteredTotal={total}
         needsActionOnly={needsActionOnly}
         myQueue={myQueue}
         sortBy={sortBy}
@@ -280,6 +304,8 @@ export const ArtistsPage = () => {
         onTagFilterChange={setTagFilter}
         onGenreFilterChange={setGenreFilter}
         onBucketFilterChange={setBucketFilter}
+        onAudienceFilterChange={setAudienceFilter}
+        onExportFiltered={() => void exportByFilters()}
         onNeedsActionChange={setNeedsActionOnly}
         onMyQueueChange={setMyQueue}
         onSortChange={setSortBy}
@@ -313,6 +339,17 @@ export const ArtistsPage = () => {
               onSuccess: () => setSelectedIds(new Set()),
             })
           }}
+          onExportSelected={exportSelected}
+          onAssignSignedHandler={() => {
+            bulkPatchMutation.mutate(
+              {
+                ids: [...selectedIds],
+                status: 'signed',
+                owner: SIGNED_DEFAULT_HANDLER,
+              },
+              { onSuccess: () => setSelectedIds(new Set()) },
+            )
+          }}
           onClearSelection={() => setSelectedIds(new Set())}
         />
       )}
@@ -342,6 +379,39 @@ export const ArtistsPage = () => {
               onUpdate={updateArtist}
               onOpen={openArtist}
             />
+          ) : viewMode === 'multi' ? (
+            <ArtistsMultiView
+              artists={artists}
+              activeId={multiActiveId}
+              onActiveChange={setMultiActiveId}
+              statusMeta={STATUS_META}
+              selectedIds={selectedIds}
+              detailVersions={detailVersions}
+              versionsLoading={false}
+              undoPending={undoMutation.isPending}
+              revertPending={revertMutation.isPending}
+              onToggleSelect={toggleSelected}
+              onUpdate={updateArtist}
+              onUndoLast={(id) => {
+                undoMutation.mutate(id, {
+                  onSuccess: () => void refetchDetailVersions(),
+                })
+              }}
+              onRevert={(id, versionId) => {
+                revertMutation.mutate(
+                  { id, versionId },
+                  { onSuccess: () => void refetchDetailVersions() },
+                )
+              }}
+              onEdit={(artist) => {
+                setEditingArtist(artist)
+                setFormMode('edit')
+              }}
+              onDelete={(artist) => {
+                if (!window.confirm(`למחוק את "${artist.nameHe || artist.nameEn}"?`)) return
+                deleteMutation.mutate(artist.id)
+              }}
+            />
           ) : viewMode === 'kanban' ? (
             <ArtistStatusFunnel
               artists={artists}
@@ -368,7 +438,7 @@ export const ArtistsPage = () => {
         </div>
       </div>
 
-      {viewMode !== 'kanban' && viewMode !== 'segments' && (
+      {viewMode !== 'kanban' && viewMode !== 'segments' && viewMode !== 'multi' && (
         <footer className="table-footer">
           <span>
             {total.toLocaleString('he-IL')} תוצאות

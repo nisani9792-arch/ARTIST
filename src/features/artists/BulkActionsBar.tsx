@@ -1,4 +1,5 @@
-import { Trash2 } from 'lucide-react'
+import { Download, Trash2, UserCheck } from 'lucide-react'
+import { SIGNED_DEFAULT_HANDLER } from '../../lib/constants'
 import { ARTIST_BUCKETS, BUCKET_META } from '../../lib/artistBuckets'
 import type { ArtistBucket, SignatureStatus } from '../../data/types'
 
@@ -13,6 +14,8 @@ type BulkActionsBarProps = {
   onBulkBucketChange: (bucket: ArtistBucket | '') => void
   onApplyBulk: () => void
   onBulkDelete: () => void
+  onExportSelected: () => void
+  onAssignSignedHandler: () => void
   onClearSelection: () => void
 }
 
@@ -27,6 +30,8 @@ export const BulkActionsBar = ({
   onBulkBucketChange,
   onApplyBulk,
   onBulkDelete,
+  onExportSelected,
+  onAssignSignedHandler,
   onClearSelection,
 }: BulkActionsBarProps) => {
   if (selectedCount === 0) return null
@@ -60,6 +65,19 @@ export const BulkActionsBar = ({
       </select>
       <button className="btn btn-primary" type="button" onClick={onApplyBulk}>
         עדכון מרוכז
+      </button>
+      <button className="btn btn-ghost" type="button" onClick={onExportSelected} title="הורד CSV של הנבחרים">
+        <Download size={14} />
+        הורד נבחרים
+      </button>
+      <button
+        className="btn btn-ghost"
+        type="button"
+        onClick={onAssignSignedHandler}
+        title={`שייך ל${SIGNED_DEFAULT_HANDLER}`}
+      >
+        <UserCheck size={14} />
+        {SIGNED_DEFAULT_HANDLER}
       </button>
       <button className="btn btn-danger" type="button" onClick={onBulkDelete}>
         <Trash2 size={14} />
