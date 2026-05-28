@@ -34,6 +34,7 @@ type AppShellProps = {
   onSetView?: (mode: ViewMode) => void
   onToggleSearch?: () => void
   backupMessage?: string
+  workspaceMode?: boolean
   children: ReactNode
 }
 
@@ -50,6 +51,7 @@ export const AppShell = ({
   onSetView,
   onToggleSearch,
   backupMessage,
+  workspaceMode = false,
   children,
 }: AppShellProps) => {
   const online = useOnlineStatus()
@@ -74,7 +76,7 @@ export const AppShell = ({
   }
 
   return (
-    <div className="app" dir="rtl">
+    <div className={`app ${workspaceMode ? 'app-shell--workspace' : ''}`} dir="rtl">
       <InstallPrompt />
       <ToastStack />
 

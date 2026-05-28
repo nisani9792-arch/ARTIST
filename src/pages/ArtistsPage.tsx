@@ -1,5 +1,5 @@
 import { AnimatePresence } from 'framer-motion'
-import { ChevronLeft, ChevronRight, SlidersHorizontal } from 'lucide-react'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useOutletContext } from 'react-router-dom'
 import {
@@ -8,18 +8,15 @@ import {
   fetchArtistsPage,
   type CrmArtist,
 } from '../api/artists'
-import { ArtistCardGrid } from '../components/ArtistCardGrid'
 import { ArtistFormModal } from '../components/ArtistFormModal'
 import { ArtistDetailPanel } from '../components/ArtistDetailPanel'
 import { ArtistVersionHistory } from '../components/ArtistVersionHistory'
 import { ArtistStatusFunnel } from '../features/artists/funnel/ArtistStatusFunnel'
-import { ArtistSegmentBoard } from '../features/artists/ArtistSegmentBoard'
-import { WorkspaceSettingsPanel } from '../components/WorkspaceSettingsPanel'
 import { ArtistsSkeleton } from '../features/artists/ArtistsSkeleton'
-import { ArtistsTable } from '../features/artists/ArtistsTable'
-import { ArtistsToolbar } from '../features/artists/ArtistsToolbar'
-import { ArtistsViewSwitcher } from '../features/artists/ArtistsViewSwitcher'
 import { BulkActionsBar } from '../features/artists/BulkActionsBar'
+import { ArtistsWorkspaceHeader } from '../features/artists/workspace/ArtistsWorkspaceHeader'
+import { ArtistsDenseTable } from '../features/artists/workspace/ArtistsDenseTable'
+import { KANBAN_WORKSPACE_LIMIT } from '../features/artists/workspace/constants'
 import { useArtistFilters } from '../features/artists/useArtistFilters'
 import { useArtistMutations } from '../features/artists/useArtistMutations'
 import { useArtistVersions, useArtistsPage } from '../features/artists/useArtistsQuery'
@@ -76,10 +73,14 @@ export const ArtistsPage = () => {
             page: 1,
             limit: Math.max(
               limit,
-              viewMode === 'segments' ? 500 : viewMode === 'multi' ? 300 : 200,
+              viewMode === 'kanban'
+                ? KANBAN_WORKSPACE_LIMIT
+                : viewMode === 'multi'
+                  ? 300
+                  : 500,
             ),
-            sort: viewMode === 'segments' ? ('bucket' as const) : apiFilters.sort,
-            bucket: viewMode === 'segments' ? 'all' : apiFilters.bucket,
+            sort: apiFilters.sort,
+            bucket: apiFilters.bucket,
           }
         : apiFilters,
     [apiFilters, limit, viewMode],
@@ -230,6 +231,21 @@ export const ArtistsPage = () => {
     })
   }
 
+  const setSelection = useCallback((ids: string[]) => {
+    setSelectedIds(new Set(ids))
+  }, [])
+
+  const handleBulkStatusChange = useCallback(
+    (ids: string[], status: SignatureStatus) => {
+      bulkPatchMutation.mutate({
+        ids,
+        status,
+        owner: bulkOwner,
+      })
+    },
+    [bulkPatchMutation, bulkOwner],
+  )
+
   const togglePageSelection = () => {
     const pageIds = artists.map((artist) => artist.id)
     const allSelected = pageIds.every((id) => selectedIds.has(id))
@@ -261,55 +277,38 @@ export const ArtistsPage = () => {
   }
 
   return (
-    <>
+    <div className="artist-workspace">
       {error && <div className="app-alert">{error.message}</div>}
 
-      <div className="artists-toolbar-row">
-        <button
-          type="button"
-          className={`btn btn-ghost mobile-filter-toggle ${filtersOpen ? 'active' : ''}`}
-          onClick={() => setFiltersOpen(!filtersOpen)}
-        >
-          <SlidersHorizontal size={16} />
-          סינון
-        </button>
-        <WorkspaceSettingsPanel
-          operatorName={operatorName}
-          onSettingsChange={() => void refetch()}
-          onViewModeChange={setViewMode}
-        />
-      </div>
-
-      <ArtistsViewSwitcher viewMode={viewMode} onChange={setViewMode} />
-
-      <ArtistsToolbar
+      <ArtistsWorkspaceHeader
         query={query}
         statusFilter={statusFilter}
         ownerFilter={ownerFilter}
-        tagFilter={tagFilter}
-        genreFilter={genreFilter}
         bucketFilter={bucketFilter}
         audienceFilter={audienceFilter}
-        filteredTotal={total}
-        needsActionOnly={needsActionOnly}
-        myQueue={myQueue}
         sortBy={sortBy}
-        filtersOpen={filtersOpen}
-        searchOpen={searchOpen}
-        filterOptions={data?.filters}
+        viewMode={viewMode}
+        total={total}
         selectedCount={selectedIds.size}
+        filterOptions={data?.filters}
         onQueryChange={setQuery}
         onStatusFilterChange={setStatusFilter}
         onOwnerFilterChange={setOwnerFilter}
+        tagFilter={tagFilter}
+        genreFilter={genreFilter}
+        needsActionOnly={needsActionOnly}
+        myQueue={myQueue}
         onTagFilterChange={setTagFilter}
         onGenreFilterChange={setGenreFilter}
         onBucketFilterChange={setBucketFilter}
         onAudienceFilterChange={setAudienceFilter}
-        onExportFiltered={() => void exportByFilters()}
         onNeedsActionChange={setNeedsActionOnly}
         onMyQueueChange={setMyQueue}
         onSortChange={setSortBy}
+        onViewModeChange={setViewMode}
+        onExportFiltered={() => void exportByFilters()}
         onSelectAllFiltered={() => void selectAllFiltered()}
+        onNewArtist={openCreateModal}
       />
 
       {selectedIds.size > 0 && (
@@ -354,32 +353,10 @@ export const ArtistsPage = () => {
         />
       )}
 
-      <div className="app-body">
-        <div className="content-wrap">
-          {isLoading ? (
-            <ArtistsSkeleton />
-          ) : viewMode === 'segments' ? (
-            <ArtistSegmentBoard
-              artists={artists}
-              handlers={handlerList}
-              statusMeta={STATUS_META}
-              selectedIds={selectedIds}
-              onToggleSelect={toggleSelected}
-              onUpdate={updateArtist}
-              onOpen={openArtist}
-            />
-          ) : viewMode === 'cards' ? (
-            <ArtistCardGrid
-              artists={artists}
-              handlers={handlerList}
-              statusMeta={STATUS_META}
-              selectedIds={selectedIds}
-              isLoading={isLoading}
-              onToggleSelect={toggleSelected}
-              onUpdate={updateArtist}
-              onOpen={openArtist}
-            />
-          ) : viewMode === 'multi' ? (
+      <div className="m3-workspace-body">
+        {isLoading ? (
+          <ArtistsSkeleton />
+        ) : viewMode === 'multi' ? (
             <ArtistsMultiView
               artists={artists}
               activeId={multiActiveId}
@@ -412,33 +389,36 @@ export const ArtistsPage = () => {
                 deleteMutation.mutate(artist.id)
               }}
             />
-          ) : viewMode === 'kanban' ? (
-            <ArtistStatusFunnel
-              artists={artists}
-              statusMeta={STATUS_META}
-              stats={data?.stats}
-              onUpdate={updateArtist}
-              onOpenDetail={openArtist}
-            />
-          ) : (
-            <ArtistsTable
-              artists={artists}
-              handlers={handlerList}
-              statusMeta={STATUS_META}
-              selectedIds={selectedIds}
-              isLoading={isLoading}
-              pageAllSelected={pageAllSelected}
-              onToggleSelect={toggleSelected}
-              onTogglePageSelection={togglePageSelection}
-              onUpdate={updateArtist}
-              onOpen={openArtist}
-              onNotesDraft={(id, notes) => setNotesDrafts((current) => ({ ...current, [id]: notes }))}
-            />
-          )}
-        </div>
+        ) : viewMode === 'kanban' ? (
+          <ArtistStatusFunnel
+            artists={artists}
+            statusMeta={STATUS_META}
+            stats={data?.stats}
+            filteredTotal={total}
+            selectedIds={selectedIds}
+            onToggleSelect={toggleSelected}
+            onSetSelection={setSelection}
+            onOpenDetail={openArtist}
+            onBulkStatusChange={handleBulkStatusChange}
+          />
+        ) : (
+          <ArtistsDenseTable
+            artists={artists}
+            handlers={handlerList}
+            statusMeta={STATUS_META}
+            selectedIds={selectedIds}
+            isLoading={isLoading}
+            pageAllSelected={pageAllSelected}
+            onToggleSelect={toggleSelected}
+            onTogglePageSelection={togglePageSelection}
+            onUpdate={updateArtist}
+            onOpen={openArtist}
+            onNotesDraft={(id, notes) => setNotesDrafts((current) => ({ ...current, [id]: notes }))}
+          />
+        )}
       </div>
 
-      {viewMode !== 'kanban' && viewMode !== 'segments' && viewMode !== 'multi' && (
+      {viewMode === 'table' && (
         <footer className="table-footer">
           <span>
             {total.toLocaleString('he-IL')} תוצאות
@@ -451,7 +431,7 @@ export const ArtistsPage = () => {
               onChange={(e) => setLimit(Number(e.target.value))}
               aria-label="פריטים בעמוד"
             >
-              {(viewMode === 'cards' ? [48, 96, 144] : [50, 100, 200]).map((size) => (
+              {[50, 100, 200].map((size) => (
                 <option key={size} value={size}>
                   {size} בעמוד
                 </option>
@@ -566,6 +546,6 @@ export const ArtistsPage = () => {
       </AnimatePresence>
 
       <button type="button" className="sr-only" onClick={() => void refetch()} aria-hidden />
-    </>
+    </div>
   )
 }

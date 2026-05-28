@@ -1,4 +1,5 @@
 @import 'tailwindcss';
+@import './features/artists/workspace/artists-workspace.css';
 
 @theme {
   --font-sans: 'Heebo', 'Plus Jakarta Sans', 'Segoe UI', Assistant, Rubik, system-ui, sans-serif;

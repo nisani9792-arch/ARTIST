@@ -74,11 +74,14 @@ export const CrmLayout = ({ operatorName }: CrmLayoutProps) => {
     }
   }, [location.pathname])
 
+  const workspaceMode = location.pathname.startsWith('/artists')
+
   return (
     <AppShell
       operatorName={operatorName}
       stats={stats}
       saveStatus={saveStatus}
+      workspaceMode={workspaceMode}
       viewMode={artistsUi?.viewMode}
       searchOpen={artistsUi?.searchOpen}
       onRefresh={() => void refetch()}
