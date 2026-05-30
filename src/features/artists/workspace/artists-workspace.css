@@ -1,19 +1,5 @@
 /* Material 3 Expressive — artist workspace (high density) */
 
-:root {
-  --m3-primary: #29abe2;
-  --m3-primary-container: rgba(41, 171, 226, 0.14);
-  --m3-on-primary: #ffffff;
-  --m3-surface: #f6f8fa;
-  --m3-surface-container: #eef2f5;
-  --m3-surface-container-low: #f3f5f7;
-  --m3-surface-container-lowest: #ffffff;
-  --m3-on-surface: #1a1c1e;
-  --m3-on-surface-variant: #5c6268;
-  --m3-outline: rgba(85, 85, 85, 0.22);
-  --m3-outline-variant: rgba(85, 85, 85, 0.12);
-}
-
 .artist-workspace {
   display: flex;
   flex-direction: column;

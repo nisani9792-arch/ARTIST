@@ -1,5 +1,6 @@
-import { Download, LayoutGrid, PanelRight, Plus, Search, Table2 } from 'lucide-react'
+import { Download, LayoutGrid, PanelRight, Plus, Table2 } from 'lucide-react'
 import type { FilterOptions } from '../../../api/artists'
+import { M3ExpressiveToolbar } from '../../../components/m3'
 import { BUCKET_META } from '../../../lib/artistBuckets'
 import type { AudienceFilter, BucketFilter, SortOption, StatusFilter, ViewMode } from '../../../types'
 
@@ -17,6 +18,7 @@ type ArtistsWorkspaceHeaderProps = {
   viewMode: ViewMode
   total: number
   selectedCount: number
+  isFetching?: boolean
   filterOptions?: FilterOptions
   onQueryChange: (value: string) => void
   onStatusFilterChange: (value: StatusFilter) => void
@@ -34,10 +36,17 @@ type ArtistsWorkspaceHeaderProps = {
   onNewArtist?: () => void
 }
 
-const VIEW_BTNS: { mode: ViewMode; label: string; Icon: typeof LayoutGrid }[] = [
-  { mode: 'kanban', label: 'משפך', Icon: LayoutGrid },
-  { mode: 'table', label: 'גיליון', Icon: Table2 },
-  { mode: 'multi', label: 'מקביל', Icon: PanelRight },
+const STATUS_MORPH = [
+  { id: 'all', label: 'הכל' },
+  { id: 'unsigned', label: 'לא חתום' },
+  { id: 'stuck', label: 'תקוע' },
+  { id: 'signed', label: 'חתום' },
+] as const
+
+const VIEW_MORPH = [
+  { mode: 'kanban' as ViewMode, label: 'משפך', Icon: LayoutGrid },
+  { mode: 'table' as ViewMode, label: 'גיליון', Icon: Table2 },
+  { mode: 'multi' as ViewMode, label: 'מקביל', Icon: PanelRight },
 ]
 
 export const ArtistsWorkspaceHeader = ({
@@ -54,6 +63,7 @@ export const ArtistsWorkspaceHeader = ({
   viewMode,
   total,
   selectedCount,
+  isFetching = false,
   filterOptions,
   onQueryChange,
   onStatusFilterChange,
@@ -70,39 +80,52 @@ export const ArtistsWorkspaceHeader = ({
   onSelectAllFiltered,
   onNewArtist,
 }: ArtistsWorkspaceHeaderProps) => (
-  <header className="m3-workspace-header flex shrink-0 flex-wrap items-center gap-2 border-b border-[var(--m3-outline-variant)] bg-[var(--m3-surface)] px-3 py-2">
-    <label className="m3-workspace-search flex min-w-[140px] max-w-[220px] flex-1 items-center gap-1.5 rounded-lg border border-[var(--m3-outline-variant)] bg-[var(--m3-surface-container-lowest)] px-2 py-1">
-      <Search size={14} className="shrink-0 text-[var(--m3-on-surface-variant)]" />
-      <input
-        className="min-w-0 flex-1 border-0 bg-transparent p-0 text-[13px] outline-none"
-        value={query}
-        onChange={(e) => onQueryChange(e.target.value)}
-        placeholder="חיפוש..."
-      />
-    </label>
-
-    <div className="m3-chip-row flex flex-wrap items-center gap-1">
-      {(
-        [
-          ['all', 'הכל'],
-          ['unsigned', 'לא חתום'],
-          ['stuck', 'תקוע'],
-          ['signed', 'חתום'],
-        ] as const
-      ).map(([value, label]) => (
-        <button
-          key={value}
-          type="button"
-          className={`m3-chip ${statusFilter === value ? 'm3-chip--active' : ''}`}
-          onClick={() => onStatusFilterChange(value)}
-        >
-          {label}
-        </button>
-      ))}
-    </div>
-
+  <M3ExpressiveToolbar
+    searchValue={query}
+    onSearchChange={onQueryChange}
+    morphItems={STATUS_MORPH.map(({ id, label }) => ({ id, label }))}
+    morphValue={statusFilter}
+    onMorphChange={(id) => onStatusFilterChange(id as StatusFilter)}
+    morphAriaLabel="סטטוס חתימה"
+    viewItems={VIEW_MORPH.map(({ mode, label, Icon }) => ({
+      id: mode,
+      label,
+      icon: <Icon size={14} />,
+      title: label,
+    }))}
+    viewValue={viewMode}
+    onViewChange={(id) => onViewModeChange(id as ViewMode)}
+    count={total}
+    selectedCount={selectedCount}
+    syncState={isFetching ? 'active' : 'idle'}
+    primaryAction={
+      onNewArtist
+        ? {
+            label: 'חדש',
+            icon: <Plus size={14} />,
+            onClick: onNewArtist,
+            menu: [
+              { id: 'select-all', label: 'בחר הכל', onSelect: onSelectAllFiltered },
+              { id: 'export', label: 'ייצוא מסונן', icon: <Download size={14} />, onSelect: onExportFiltered },
+            ],
+          }
+        : undefined
+    }
+    trailing={
+      !onNewArtist ? (
+        <>
+          <button type="button" className="m3-ex-btn-ghost" onClick={onSelectAllFiltered}>
+            בחר הכל
+          </button>
+          <button type="button" className="m3-ex-btn-ghost" onClick={onExportFiltered} aria-label="ייצוא">
+            <Download size={14} />
+          </button>
+        </>
+      ) : undefined
+    }
+  >
     <select
-      className="m3-select-compact"
+      className="m3-ex-select"
       value={ownerFilter}
       onChange={(e) => onOwnerFilterChange(e.target.value)}
       aria-label="מטפל"
@@ -116,7 +139,7 @@ export const ArtistsWorkspaceHeader = ({
     </select>
 
     <select
-      className="m3-select-compact"
+      className="m3-ex-select"
       value={bucketFilter}
       onChange={(e) => onBucketFilterChange(e.target.value as BucketFilter)}
       aria-label="קטגוריה"
@@ -128,7 +151,7 @@ export const ArtistsWorkspaceHeader = ({
     </select>
 
     <select
-      className="m3-select-compact"
+      className="m3-ex-select"
       value={audienceFilter}
       onChange={(e) => onAudienceFilterChange(e.target.value as AudienceFilter)}
       aria-label="קהל"
@@ -141,7 +164,7 @@ export const ArtistsWorkspaceHeader = ({
 
     {(filterOptions?.tags?.length ?? 0) > 0 && (
       <select
-        className="m3-select-compact m3-select-compact--narrow"
+        className="m3-ex-select m3-ex-select--narrow"
         value={tagFilter}
         onChange={(e) => onTagFilterChange(e.target.value)}
         aria-label="תגית"
@@ -157,7 +180,7 @@ export const ArtistsWorkspaceHeader = ({
 
     {(filterOptions?.genres?.length ?? 0) > 0 && (
       <select
-        className="m3-select-compact m3-select-compact--narrow"
+        className="m3-ex-select m3-ex-select--narrow"
         value={genreFilter}
         onChange={(e) => onGenreFilterChange(e.target.value)}
         aria-label="ז'אנר"
@@ -173,21 +196,21 @@ export const ArtistsWorkspaceHeader = ({
 
     <button
       type="button"
-      className={`m3-chip ${needsActionOnly ? 'm3-chip--active' : ''}`}
+      className={`m3-ex-btn-ghost ${needsActionOnly ? 'ring-1 ring-[var(--jusic-color-primary)]' : ''}`}
       onClick={() => onNeedsActionChange(!needsActionOnly)}
     >
       דורש טיפול
     </button>
     <button
       type="button"
-      className={`m3-chip ${myQueue ? 'm3-chip--active' : ''}`}
+      className={`m3-ex-btn-ghost ${myQueue ? 'ring-1 ring-[var(--jusic-color-primary)]' : ''}`}
       onClick={() => onMyQueueChange(!myQueue)}
     >
       התור שלי
     </button>
 
     <select
-      className="m3-select-compact"
+      className="m3-ex-select"
       value={sortBy}
       onChange={(e) => onSortChange(e.target.value as SortOption)}
       aria-label="מיון"
@@ -197,38 +220,5 @@ export const ArtistsWorkspaceHeader = ({
       <option value="status">סטטוס</option>
       <option value="bucket">קטגוריה</option>
     </select>
-
-    <div className="m3-view-toggle flex items-center gap-0.5 rounded-lg border border-[var(--m3-outline-variant)] p-0.5">
-      {VIEW_BTNS.map(({ mode, label, Icon }) => (
-        <button
-          key={mode}
-          type="button"
-          className={`m3-view-btn ${viewMode === mode ? 'm3-view-btn--active' : ''}`}
-          onClick={() => onViewModeChange(mode)}
-          title={label}
-        >
-          <Icon size={14} />
-        </button>
-      ))}
-    </div>
-
-    <span className="m3-workspace-count text-[11px] font-semibold tabular-nums text-[var(--m3-on-surface-variant)]">
-      {total.toLocaleString('he-IL')}
-      {selectedCount > 0 ? ` · ${selectedCount} נבחרו` : ''}
-    </span>
-
-    <div className="mr-auto flex items-center gap-1">
-      <button type="button" className="m3-btn-ghost" onClick={onSelectAllFiltered}>
-        בחר הכל
-      </button>
-      <button type="button" className="m3-btn-ghost" onClick={onExportFiltered}>
-        <Download size={14} />
-      </button>
-      {onNewArtist && (
-        <button type="button" className="m3-btn-primary" onClick={onNewArtist}>
-          <Plus size={14} />
-        </button>
-      )}
-    </div>
-  </header>
+  </M3ExpressiveToolbar>
 )

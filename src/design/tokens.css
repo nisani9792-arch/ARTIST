@@ -1,0 +1,188 @@
+/**
+ * Jusic × Material 3 Expressive 2026 — Design Tokens
+ * @see DESIGN.md
+ */
+
+:root {
+  /* ── Color: primary & brand ── */
+  --jusic-color-primary: #29abe2;
+  --jusic-color-primary-mid: #4dbde8;
+  --jusic-color-primary-strong: #1a8bb8;
+  --jusic-color-on-primary: #ffffff;
+  --jusic-color-primary-container: rgba(41, 171, 226, 0.14);
+  --jusic-color-primary-glow: rgba(41, 171, 226, 0.24);
+
+  /* ── Color: surface system ── */
+  --jusic-color-surface: #f6f8fa;
+  --jusic-color-surface-solid: #ffffff;
+  --jusic-color-surface-container: #eef2f5;
+  --jusic-color-surface-container-low: #f3f5f7;
+  --jusic-color-surface-container-lowest: #ffffff;
+  --jusic-color-on-surface: #1a1c1e;
+  --jusic-color-on-surface-variant: #5c6268;
+  --jusic-color-outline: rgba(85, 85, 85, 0.22);
+  --jusic-color-outline-variant: rgba(85, 85, 85, 0.12);
+
+  /* ── Color: semantic ── */
+  --jusic-color-success: #0d9f6e;
+  --jusic-color-success-container: rgba(13, 159, 110, 0.12);
+  --jusic-color-warning: #b07808;
+  --jusic-color-warning-container: rgba(176, 120, 8, 0.12);
+  --jusic-color-error: #c94a4a;
+  --jusic-color-error-container: rgba(201, 74, 74, 0.12);
+  --jusic-color-brand-gray: #7d7d7d;
+
+  /* ── Color: text (legacy body copy) ── */
+  --jusic-color-text: #45505a;
+  --jusic-color-text-strong: #2c3238;
+  --jusic-color-muted: #66707a;
+
+  /* ── Typography ── */
+  --jusic-font-family: 'Heebo', 'Plus Jakarta Sans', 'Segoe UI', Assistant, Rubik, system-ui,
+    sans-serif;
+  --jusic-type-display-sm: 600 22px/1.25 var(--jusic-font-family);
+  --jusic-type-title-md: 700 17px/1.35 var(--jusic-font-family);
+  --jusic-type-body-md: 400 14px/1.5 var(--jusic-font-family);
+  --jusic-type-label-sm: 600 11px/1.3 var(--jusic-font-family);
+  --jusic-type-label-xs: 600 10px/1.2 var(--jusic-font-family);
+
+  /* ── Shape / corner morph targets ── */
+  --jusic-shape-xs: 6px;
+  --jusic-shape-sm: 10px;
+  --jusic-shape-md: 14px;
+  --jusic-shape-lg: 18px;
+  --jusic-shape-xl: 24px;
+  --jusic-shape-pill: 999px;
+  --jusic-shape-morph-duration: 320ms;
+  --jusic-shape-morph-ease: cubic-bezier(0.22, 1, 0.36, 1);
+
+  /* ── Motion physics ── */
+  --jusic-motion-fast: 150ms;
+  --jusic-motion-medium: 280ms;
+  --jusic-motion-slow: 420ms;
+  --jusic-motion-ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --jusic-motion-ease-emphasized: cubic-bezier(0.05, 0.7, 0.1, 1);
+  --jusic-motion-ease-emphasized-decel: cubic-bezier(0.05, 0.7, 0.1, 1);
+  --jusic-motion-ease-spring: cubic-bezier(0.22, 1, 0.36, 1);
+  --jusic-motion-ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* ── Spacing (4px grid) ── */
+  --jusic-space-0: 0;
+  --jusic-space-1: 4px;
+  --jusic-space-2: 8px;
+  --jusic-space-3: 12px;
+  --jusic-space-4: 16px;
+  --jusic-space-5: 20px;
+  --jusic-space-6: 24px;
+  --jusic-touch-min: 44px;
+
+  /* ── Elevation ── */
+  --jusic-elev-1: 0 2px 8px rgba(44, 50, 56, 0.09), 0 1px 2px rgba(44, 50, 56, 0.05);
+  --jusic-elev-2: 0 6px 20px rgba(44, 50, 56, 0.12), 0 2px 6px rgba(44, 50, 56, 0.06);
+  --jusic-elev-3: 0 12px 36px rgba(44, 50, 56, 0.15), 0 4px 12px rgba(44, 50, 56, 0.08);
+  --jusic-elev-accent: 0 8px 24px var(--jusic-color-primary-glow);
+
+  /* ── Glass / Antigravity surfaces ── */
+  --jusic-glass-bg: rgba(246, 248, 250, 0.72);
+  --jusic-glass-bg-strong: rgba(255, 255, 255, 0.88);
+  --jusic-glass-blur: blur(20px) saturate(1.15);
+  --jusic-glass-border: rgba(85, 85, 85, 0.1);
+
+  /* ── Adaptive gradients ── */
+  --jusic-gradient-mesh-1: #d6eef7;
+  --jusic-gradient-mesh-2: #dde3e7;
+  --jusic-gradient-mesh-3: #cfebf5;
+  --jusic-gradient-page: radial-gradient(
+      ellipse 80% 60% at 10% 0%,
+      var(--jusic-gradient-mesh-1) 0%,
+      transparent 55%
+    ),
+    radial-gradient(ellipse 70% 55% at 90% 8%, var(--jusic-gradient-mesh-2) 0%, transparent 50%),
+    radial-gradient(ellipse 60% 50% at 50% 100%, var(--jusic-gradient-mesh-3) 0%, transparent 45%),
+    #e4eaee;
+  --jusic-gradient-toolbar: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.95) 0%,
+    rgba(246, 248, 250, 0.85) 100%
+  );
+  --jusic-gradient-glow-primary: radial-gradient(
+    ellipse 120% 80% at 50% -20%,
+    rgba(41, 171, 226, 0.12) 0%,
+    transparent 60%
+  );
+
+  /* ── Layout chrome ── */
+  --jusic-header-h: 76px;
+  --jusic-toolbar-h: 48px;
+  --jusic-row-h-compact: 36px;
+  --jusic-row-h: 44px;
+
+  /* ── Legacy aliases (migrate gradually) ── */
+  --text: var(--jusic-color-text);
+  --text-strong: var(--jusic-color-text-strong);
+  --muted: var(--jusic-color-muted);
+  --bg: #e4eaee;
+  --bg-mesh-1: var(--jusic-gradient-mesh-1);
+  --bg-mesh-2: var(--jusic-gradient-mesh-2);
+  --bg-mesh-3: var(--jusic-gradient-mesh-3);
+  --surface: var(--jusic-color-surface);
+  --surface-solid: var(--jusic-color-surface-solid);
+  --surface-2: var(--jusic-color-surface-container);
+  --border: var(--jusic-color-outline-variant);
+  --border-strong: rgba(41, 171, 226, 0.38);
+  --accent: var(--jusic-color-primary);
+  --accent-mid: var(--jusic-color-primary-mid);
+  --accent-strong: var(--jusic-color-primary-strong);
+  --accent-soft: var(--jusic-color-primary-container);
+  --brand-gray: var(--jusic-color-brand-gray);
+  --brand-gray-soft: rgba(125, 125, 125, 0.14);
+  --shadow-sm: var(--jusic-elev-1);
+  --shadow-md: var(--jusic-elev-2);
+  --shadow-lg: var(--jusic-elev-3);
+  --shadow-accent: var(--jusic-elev-accent);
+  --glow-sm: var(--jusic-elev-1);
+  --glow-md: var(--jusic-elev-2);
+  --glow-accent: var(--jusic-elev-accent);
+  --green: var(--jusic-color-success);
+  --green-soft: var(--jusic-color-success-container);
+  --red: var(--jusic-color-error);
+  --red-soft: var(--jusic-color-error-container);
+  --yellow: var(--jusic-color-warning);
+  --yellow-soft: var(--jusic-color-warning-container);
+  --radius: var(--jusic-shape-md);
+  --radius-lg: var(--jusic-shape-lg);
+  --radius-xl: var(--jusic-shape-xl);
+  --header-h: var(--jusic-header-h);
+  --toolbar-h: var(--jusic-toolbar-h);
+  --row-h: var(--jusic-row-h);
+  --blur-glass: var(--jusic-glass-blur);
+  --ease-spring: var(--jusic-motion-ease-spring);
+
+  /* M3 workspace aliases */
+  --m3-primary: var(--jusic-color-primary);
+  --m3-primary-container: var(--jusic-color-primary-container);
+  --m3-on-primary: var(--jusic-color-on-primary);
+  --m3-surface: var(--jusic-color-surface);
+  --m3-surface-container: var(--jusic-color-surface-container);
+  --m3-surface-container-low: var(--jusic-color-surface-container-low);
+  --m3-surface-container-lowest: var(--jusic-color-surface-container-lowest);
+  --m3-on-surface: var(--jusic-color-on-surface);
+  --m3-on-surface-variant: var(--jusic-color-on-surface-variant);
+  --m3-outline: var(--jusic-color-outline);
+  --m3-outline-variant: var(--jusic-color-outline-variant);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --jusic-shape-morph-duration: 0ms;
+    --jusic-motion-fast: 0ms;
+    --jusic-motion-medium: 0ms;
+    --jusic-motion-slow: 0ms;
+  }
+}
+
+[data-theme='dark'] {
+  /* Phase 2 — placeholder structure */
+  --jusic-color-surface: #121416;
+  --jusic-color-on-surface: #e2e2e5;
+}

@@ -1,54 +1,20 @@
 @import 'tailwindcss';
+@import './design/tokens.css';
+@import './design-system/tokens/jusic-m3-tokens.css';
+@import './design/m3-expressive.css';
+@import './design-system/react/m3-expressive-toolbar.css';
 @import './features/artists/workspace/artists-workspace.css';
 
 @theme {
-  --font-sans: 'Heebo', 'Plus Jakarta Sans', 'Segoe UI', Assistant, Rubik, system-ui, sans-serif;
+  --font-sans: var(--jusic-font-family);
+  --color-jusic-primary: var(--jusic-color-primary);
+  --color-jusic-surface: var(--jusic-color-surface);
+  --radius-jusic-md: var(--jusic-shape-md);
 }
 
 :root {
-  /* JUSIC ARTIST — cyan + slate from logo (#29ABE2, #7D7D7D, #555555) */
-  --text: #45505a;
-  --text-strong: #2c3238;
-  --muted: #66707a;
-  --bg: #e4eaee;
-  --bg-mesh-1: #d6eef7;
-  --bg-mesh-2: #dde3e7;
-  --bg-mesh-3: #cfebf5;
-  --surface: #f6f8fa;
-  --surface-solid: #ffffff;
-  --surface-2: #eef2f5;
-  --border: rgba(85, 85, 85, 0.16);
-  --border-strong: rgba(41, 171, 226, 0.38);
-  --accent: #29abe2;
-  --accent-mid: #4dbde8;
-  --accent-strong: #1a8bb8;
-  --accent-soft: rgba(41, 171, 226, 0.12);
-  --brand-gray: #7d7d7d;
-  --brand-gray-soft: rgba(125, 125, 125, 0.14);
-  --shadow-sm: 0 2px 8px rgba(44, 50, 56, 0.09), 0 1px 2px rgba(44, 50, 56, 0.05);
-  --shadow-md: 0 6px 20px rgba(44, 50, 56, 0.12), 0 2px 6px rgba(44, 50, 56, 0.06);
-  --shadow-lg: 0 12px 36px rgba(44, 50, 56, 0.15), 0 4px 12px rgba(44, 50, 56, 0.08);
-  --shadow-accent: 0 8px 24px rgba(41, 171, 226, 0.24);
-  --glow-sm: var(--shadow-sm);
-  --glow-md: var(--shadow-md);
-  --glow-accent: var(--shadow-accent);
-  --green: #0d9f6e;
-  --green-soft: rgba(13, 159, 110, 0.12);
-  --red: #c94a4a;
-  --red-soft: rgba(201, 74, 74, 0.12);
-  --yellow: #b07808;
-  --yellow-soft: rgba(176, 120, 8, 0.12);
-  --radius: 12px;
-  --radius-lg: 18px;
-  --radius-xl: 24px;
-  --header-h: 76px;
-  --toolbar-h: 48px;
-  --row-h: 44px;
-  --blur-glass: blur(18px) saturate(1.1);
-  --ease-spring: cubic-bezier(0.22, 1, 0.36, 1);
-
-  font: 14px/1.5 var(--font-sans);
-  color: var(--text);
+  font: var(--jusic-type-body-md);
+  color: var(--jusic-color-text);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -68,11 +34,7 @@ body {
   margin: 0;
   padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom)
     env(safe-area-inset-left);
-  background:
-    radial-gradient(ellipse 80% 60% at 10% 0%, var(--bg-mesh-1) 0%, transparent 55%),
-    radial-gradient(ellipse 70% 55% at 90% 8%, var(--bg-mesh-2) 0%, transparent 50%),
-    radial-gradient(ellipse 60% 50% at 50% 100%, var(--bg-mesh-3) 0%, transparent 45%),
-    var(--bg);
+  background: var(--jusic-gradient-page);
   background-attachment: fixed;
 }
 

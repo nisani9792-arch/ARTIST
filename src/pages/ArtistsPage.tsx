@@ -290,6 +290,7 @@ export const ArtistsPage = () => {
         viewMode={viewMode}
         total={total}
         selectedCount={selectedIds.size}
+        isFetching={isFetching}
         filterOptions={data?.filters}
         onQueryChange={setQuery}
         onStatusFilterChange={setStatusFilter}
