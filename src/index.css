@@ -1,19 +1,22 @@
 @import 'tailwindcss';
-@import './design/tokens.css';
 @import './design-system/tokens/jusic-m3-tokens.css';
-@import './design/m3-expressive.css';
 @import './design-system/react/m3-expressive-toolbar.css';
 @import './features/artists/workspace/artists-workspace.css';
 
 @theme {
-  --font-sans: var(--jusic-font-family);
-  --color-jusic-primary: var(--jusic-color-primary);
-  --color-jusic-surface: var(--jusic-color-surface);
-  --radius-jusic-md: var(--jusic-shape-md);
+  --font-sans: var(--jm3-font-family);
+  --color-jm3-primary: var(--jm3-color-primary);
+  --color-jm3-surface: var(--jm3-color-surface);
+  --color-jm3-on-surface: var(--jm3-color-on-surface);
+  --color-jm3-tertiary: var(--jm3-color-tertiary);
+  --radius-jm3-md: var(--jm3-shape-md);
+  --radius-jm3-lg: var(--jm3-shape-lg);
+  --shadow-jm3-1: var(--jm3-elevation-1);
+  --ease-jm3-emphasized: var(--jm3-motion-ease-emphasized);
 }
 
 :root {
-  font: var(--jusic-type-body-md);
+  font: var(--jm3-type-body-md);
   color: var(--jusic-color-text);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -34,38 +37,12 @@ body {
   margin: 0;
   padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom)
     env(safe-area-inset-left);
-  background: var(--jusic-gradient-page);
+  background: var(--jm3-gradient-canvas);
   background-attachment: fixed;
 }
 
-button,
-input,
-select,
-textarea {
-  font: inherit;
-}
-
-button:focus-visible,
-input:focus-visible,
-select:focus-visible,
-textarea:focus-visible {
-  outline: 2px solid rgba(41, 171, 226, 0.55);
-  outline-offset: 2px;
-}
-
-#root {
-  min-height: 100svh;
-}
-
-h1,
-h2,
-h3,
-p {
-  margin: 0;
-}
-
-.jusic-logo {
-  flex-shrink: 0;
-  object-fit: contain;
-  display: block;
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
 }

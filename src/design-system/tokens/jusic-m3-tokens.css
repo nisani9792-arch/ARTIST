@@ -1,110 +1,278 @@
 /**
- * Jusic M3 Expressive — canonical design tokens
- * Import once per app: @import "./design-system/tokens/jusic-m3-tokens.css";
+ * Jusic M3 Expressive 2026 — canonical design tokens
+ * Single source of truth for ARTIST, SERVICE (Elite Pro CRM), and consumer surfaces.
+ * @see DESIGN.md
  */
 
 :root {
   color-scheme: light;
 
-  /* Brand */
-  --jm3-brand-cyan: #2fb4d8;
+  /* ── Brand ── */
+  --jm3-brand-cyan: #29abe2;
+  --jm3-brand-cyan-mid: #4dbde8;
   --jm3-brand-cyan-dark: #1a8bb8;
   --jm3-brand-slate: #64748b;
+  --jm3-brand-gray: #7d7d7d;
 
-  /* Material 3 color roles */
-  --jm3-color-primary: #4f46e5;
-  --jm3-color-primary-container: rgba(79, 70, 229, 0.12);
+  /* ── Material 3 color roles ── */
+  --jm3-color-primary: var(--jm3-brand-cyan);
+  --jm3-color-primary-container: rgba(41, 171, 226, 0.14);
   --jm3-color-on-primary: #ffffff;
   --jm3-color-secondary: #0d9488;
   --jm3-color-secondary-container: rgba(13, 148, 136, 0.1);
   --jm3-color-tertiary: #7c3aed;
   --jm3-color-tertiary-container: rgba(124, 58, 237, 0.1);
 
-  --jm3-color-surface: #f8fafc;
-  --jm3-color-surface-dim: #f1f5f9;
-  --jm3-color-surface-container: #ffffff;
+  --jm3-color-surface: #f6f8fa;
+  --jm3-color-surface-dim: #eef2f5;
+  --jm3-color-surface-container: #eef2f5;
+  --jm3-color-surface-container-low: #f3f5f7;
+  --jm3-color-surface-container-lowest: #ffffff;
   --jm3-color-surface-container-high: rgba(255, 255, 255, 0.94);
   --jm3-color-surface-container-highest: rgba(255, 255, 255, 0.98);
 
-  --jm3-color-on-surface: #0f172a;
-  --jm3-color-on-surface-variant: #475569;
-  --jm3-color-outline: rgba(148, 163, 184, 0.38);
-  --jm3-color-outline-variant: rgba(148, 163, 184, 0.22);
+  --jm3-color-on-surface: #1a1c1e;
+  --jm3-color-on-surface-variant: #5c6268;
+  --jm3-color-outline: rgba(85, 85, 85, 0.22);
+  --jm3-color-outline-variant: rgba(85, 85, 85, 0.12);
 
-  --jm3-color-error: #dc2626;
-  --jm3-color-error-container: rgba(220, 38, 38, 0.1);
-  --jm3-color-warning: #d97706;
-  --jm3-color-warning-container: rgba(217, 119, 6, 0.1);
-  --jm3-color-success: #059669;
-  --jm3-color-success-container: rgba(5, 150, 105, 0.1);
+  --jm3-color-error: #c94a4a;
+  --jm3-color-error-container: rgba(201, 74, 74, 0.12);
+  --jm3-color-warning: #b07808;
+  --jm3-color-warning-container: rgba(176, 120, 8, 0.12);
+  --jm3-color-success: #0d9f6e;
+  --jm3-color-success-container: rgba(13, 159, 110, 0.12);
 
-  /* Typography */
-  --jm3-font-family: "Heebo", "Plus Jakarta Sans", "Segoe UI", Assistant, system-ui, sans-serif;
+  /* ── Typography ── */
+  --jm3-font-family: "Heebo", "Plus Jakarta Sans", "Segoe UI", Assistant, Rubik, system-ui,
+    sans-serif;
+  --jm3-type-display-sm: 600 1.375rem/1.25 var(--jm3-font-family);
+  --jm3-type-title-md: 700 1.0625rem/1.35 var(--jm3-font-family);
   --jm3-type-title-sm: 600 0.875rem/1.35 var(--jm3-font-family);
-  --jm3-type-title-md: 700 1rem/1.3 var(--jm3-font-family);
-  --jm3-type-body-sm: 400 0.8125rem/1.45 var(--jm3-font-family);
   --jm3-type-body-md: 400 0.875rem/1.5 var(--jm3-font-family);
-  --jm3-type-label-sm: 600 0.6875rem/1.2 var(--jm3-font-family);
-  --jm3-type-label-xs: 700 0.625rem/1.1 var(--jm3-font-family);
+  --jm3-type-body-sm: 400 0.8125rem/1.45 var(--jm3-font-family);
+  --jm3-type-label-sm: 600 0.6875rem/1.3 var(--jm3-font-family);
+  --jm3-type-label-xs: 700 0.625rem/1.2 var(--jm3-font-family);
 
-  /* Shape — morphing radii */
+  /* ── Shape — morphing radii ── */
   --jm3-shape-none: 0;
-  --jm3-shape-xs: 8px;
-  --jm3-shape-sm: 12px;
-  --jm3-shape-md: 16px;
-  --jm3-shape-lg: 20px;
-  --jm3-shape-xl: 28px;
+  --jm3-shape-xs: 6px;
+  --jm3-shape-sm: 10px;
+  --jm3-shape-md: 14px;
+  --jm3-shape-lg: 18px;
+  --jm3-shape-xl: 24px;
   --jm3-shape-full: 9999px;
   --jm3-shape-morph-duration: 320ms;
+  --jm3-shape-morph-ease: var(--jm3-motion-ease-emphasized);
 
-  /* Motion physics */
+  /* ── Motion physics (M3 Expressive 2026) ── */
   --jm3-motion-ease-standard: cubic-bezier(0.2, 0, 0, 1);
   --jm3-motion-ease-emphasized: cubic-bezier(0.22, 1, 0.36, 1);
+  --jm3-motion-ease-emphasized-decel: cubic-bezier(0.05, 0.7, 0.1, 1);
   --jm3-motion-ease-decelerate: cubic-bezier(0, 0, 0, 1);
   --jm3-motion-ease-accelerate: cubic-bezier(0.3, 0, 1, 1);
+  --jm3-motion-ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
   --jm3-motion-duration-instant: 100ms;
   --jm3-motion-duration-short: 150ms;
   --jm3-motion-duration-medium: 280ms;
   --jm3-motion-duration-long: 420ms;
+
+  /* Spring constants (mirrored in tokens/motion.ts for Framer) */
   --jm3-spring-stiffness: 380;
   --jm3-spring-damping: 32;
   --jm3-spring-mass: 0.85;
+  --jm3-spring-bump-stiffness: 620;
+  --jm3-spring-bump-damping: 18;
+  --jm3-spring-morph-stiffness: 480;
+  --jm3-spring-morph-damping: 34;
 
-  /* Elevation */
+  /* ── Spacing (4px grid) ── */
+  --jm3-space-0: 0;
+  --jm3-space-1: 4px;
+  --jm3-space-2: 8px;
+  --jm3-space-3: 12px;
+  --jm3-space-4: 16px;
+  --jm3-space-5: 20px;
+  --jm3-space-6: 24px;
+  --jm3-touch-min: 44px;
+
+  /* ── Elevation & glass (Antigravity) ── */
   --jm3-elevation-0: none;
-  --jm3-elevation-1: 0 1px 3px rgba(15, 23, 42, 0.06), 0 0 0 1px var(--jm3-color-outline-variant);
-  --jm3-elevation-2: 0 4px 16px rgba(15, 23, 42, 0.08), 0 0 0 1px var(--jm3-color-outline-variant);
-  --jm3-elevation-3: 0 12px 40px rgba(15, 23, 42, 0.12), 0 0 0 1px var(--jm3-color-outline);
-
-  --jm3-glass-blur: 20px;
+  --jm3-elevation-1: 0 2px 8px rgba(44, 50, 56, 0.09), 0 1px 2px rgba(44, 50, 56, 0.05);
+  --jm3-elevation-2: 0 6px 20px rgba(44, 50, 56, 0.12), 0 2px 6px rgba(44, 50, 56, 0.06);
+  --jm3-elevation-3: 0 12px 36px rgba(44, 50, 56, 0.15), 0 4px 12px rgba(44, 50, 56, 0.08);
+  --jm3-glass-blur: blur(20px) saturate(1.15);
+  --jm3-glass-bg: rgba(246, 248, 250, 0.72);
+  --jm3-glass-bg-strong: rgba(255, 255, 255, 0.88);
+  --jm3-glass-border: rgba(85, 85, 85, 0.1);
   --jm3-glass-edge: inset 0 1px 0 rgba(255, 255, 255, 0.85);
-  --jm3-glow-primary: 0 4px 24px rgba(79, 70, 229, 0.18);
+  --jm3-glow-primary: 0 8px 24px rgba(41, 171, 226, 0.24);
   --jm3-glow-brand: 0 6px 20px rgba(47, 180, 216, 0.2);
+  --jm3-glow-ai: 0 8px 28px rgba(124, 58, 237, 0.16);
 
-  /* Canvas gradients (Antigravity mesh) */
+  /* ── Canvas gradients ── */
+  --jm3-gradient-mesh-1: #d6eef7;
+  --jm3-gradient-mesh-2: #dde3e7;
+  --jm3-gradient-mesh-3: #cfebf5;
   --jm3-gradient-canvas:
-    radial-gradient(ellipse 80% 55% at 12% 0%, rgba(47, 180, 216, 0.2) 0%, transparent 55%),
-    radial-gradient(ellipse 65% 50% at 88% 6%, rgba(124, 58, 237, 0.08) 0%, transparent 50%),
-    var(--jm3-color-surface);
+    radial-gradient(ellipse 80% 60% at 10% 0%, var(--jm3-gradient-mesh-1) 0%, transparent 55%),
+    radial-gradient(ellipse 70% 55% at 90% 8%, var(--jm3-gradient-mesh-2) 0%, transparent 50%),
+    radial-gradient(ellipse 60% 50% at 50% 100%, var(--jm3-gradient-mesh-3) 0%, transparent 45%),
+    #e4eaee;
+  --jm3-gradient-toolbar: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.95) 0%,
+    rgba(246, 248, 250, 0.85) 100%
+  );
+  --jm3-gradient-glow-primary: radial-gradient(
+    ellipse 120% 80% at 50% -20%,
+    rgba(41, 171, 226, 0.12) 0%,
+    transparent 60%
+  );
 
-  /* Layout */
+  /* ── Layout chrome ── */
+  --jm3-header-height: 76px;
   --jm3-toolbar-height: 48px;
   --jm3-toolbar-height-compact: 40px;
   --jm3-rail-width: 52px;
-  --jm3-inbox-row-height: 36px;
+  --jm3-row-height: 44px;
+  --jm3-row-height-compact: 36px;
+  --jm3-bottom-sheet-radius: var(--jm3-shape-xl);
 
-  /* Legacy bridge (SERVICE / ARTIST) */
+  /* ── Legacy bridge (--jusic-* / --m3-* / app vars) ── */
+  --jusic-color-primary: var(--jm3-color-primary);
+  --jusic-color-primary-mid: var(--jm3-brand-cyan-mid);
+  --jusic-color-primary-strong: var(--jm3-brand-cyan-dark);
+  --jusic-color-on-primary: var(--jm3-color-on-primary);
+  --jusic-color-primary-container: var(--jm3-color-primary-container);
+  --jusic-color-primary-glow: rgba(41, 171, 226, 0.24);
+  --jusic-color-surface: var(--jm3-color-surface);
+  --jusic-color-surface-solid: var(--jm3-color-surface-container-lowest);
+  --jusic-color-surface-container: var(--jm3-color-surface-container);
+  --jusic-color-surface-container-low: var(--jm3-color-surface-container-low);
+  --jusic-color-surface-container-lowest: var(--jm3-color-surface-container-lowest);
+  --jusic-color-on-surface: var(--jm3-color-on-surface);
+  --jusic-color-on-surface-variant: var(--jm3-color-on-surface-variant);
+  --jusic-color-outline: var(--jm3-color-outline);
+  --jusic-color-outline-variant: var(--jm3-color-outline-variant);
+  --jusic-color-success: var(--jm3-color-success);
+  --jusic-color-success-container: var(--jm3-color-success-container);
+  --jusic-color-warning: var(--jm3-color-warning);
+  --jusic-color-warning-container: var(--jm3-color-warning-container);
+  --jusic-color-error: var(--jm3-color-error);
+  --jusic-color-error-container: var(--jm3-color-error-container);
+  --jusic-color-brand-gray: var(--jm3-brand-gray);
+  --jusic-color-text: #45505a;
+  --jusic-color-text-strong: #2c3238;
+  --jusic-color-muted: #66707a;
+  --jusic-font-family: var(--jm3-font-family);
+  --jusic-type-display-sm: var(--jm3-type-display-sm);
+  --jusic-type-title-md: var(--jm3-type-title-md);
+  --jusic-type-body-md: var(--jm3-type-body-md);
+  --jusic-type-label-sm: var(--jm3-type-label-sm);
+  --jusic-type-label-xs: var(--jm3-type-label-xs);
+  --jusic-shape-xs: var(--jm3-shape-xs);
+  --jusic-shape-sm: var(--jm3-shape-sm);
+  --jusic-shape-md: var(--jm3-shape-md);
+  --jusic-shape-lg: var(--jm3-shape-lg);
+  --jusic-shape-xl: var(--jm3-shape-xl);
+  --jusic-shape-pill: var(--jm3-shape-full);
+  --jusic-shape-morph-duration: var(--jm3-shape-morph-duration);
+  --jusic-shape-morph-ease: var(--jm3-shape-morph-ease);
+  --jusic-motion-fast: var(--jm3-motion-duration-short);
+  --jusic-motion-medium: var(--jm3-motion-duration-medium);
+  --jusic-motion-slow: var(--jm3-motion-duration-long);
+  --jusic-motion-ease-standard: var(--jm3-motion-ease-standard);
+  --jusic-motion-ease-emphasized: var(--jm3-motion-ease-emphasized-decel);
+  --jusic-motion-ease-emphasized-decel: var(--jm3-motion-ease-emphasized-decel);
+  --jusic-motion-ease-spring: var(--jm3-motion-ease-emphasized);
+  --jusic-motion-ease-bounce: var(--jm3-motion-ease-bounce);
+  --jusic-space-0: var(--jm3-space-0);
+  --jusic-space-1: var(--jm3-space-1);
+  --jusic-space-2: var(--jm3-space-2);
+  --jusic-space-3: var(--jm3-space-3);
+  --jusic-space-4: var(--jm3-space-4);
+  --jusic-space-5: var(--jm3-space-5);
+  --jusic-space-6: var(--jm3-space-6);
+  --jusic-touch-min: var(--jm3-touch-min);
+  --jusic-elev-1: var(--jm3-elevation-1);
+  --jusic-elev-2: var(--jm3-elevation-2);
+  --jusic-elev-3: var(--jm3-elevation-3);
+  --jusic-elev-accent: var(--jm3-glow-primary);
+  --jusic-glass-bg: var(--jm3-glass-bg);
+  --jusic-glass-bg-strong: var(--jm3-glass-bg-strong);
+  --jusic-glass-blur: var(--jm3-glass-blur);
+  --jusic-glass-border: var(--jm3-glass-border);
+  --jusic-gradient-mesh-1: var(--jm3-gradient-mesh-1);
+  --jusic-gradient-mesh-2: var(--jm3-gradient-mesh-2);
+  --jusic-gradient-mesh-3: var(--jm3-gradient-mesh-3);
+  --jusic-gradient-page: var(--jm3-gradient-canvas);
+  --jusic-gradient-toolbar: var(--jm3-gradient-toolbar);
+  --jusic-gradient-glow-primary: var(--jm3-gradient-glow-primary);
+  --jusic-header-h: var(--jm3-header-height);
+  --jusic-toolbar-h: var(--jm3-toolbar-height);
+  --jusic-row-h-compact: var(--jm3-row-height-compact);
+  --jusic-row-h: var(--jm3-row-height);
+  --m3-primary: var(--jm3-color-primary);
+  --m3-primary-container: var(--jm3-color-primary-container);
+  --m3-on-primary: var(--jm3-color-on-primary);
+  --m3-surface: var(--jm3-color-surface);
+  --m3-surface-container: var(--jm3-color-surface-container);
+  --m3-surface-container-low: var(--jm3-color-surface-container-low);
+  --m3-surface-container-lowest: var(--jm3-color-surface-container-lowest);
+  --m3-on-surface: var(--jm3-color-on-surface);
+  --m3-on-surface-variant: var(--jm3-color-on-surface-variant);
+  --m3-outline: var(--jm3-color-outline);
+  --m3-outline-variant: var(--jm3-color-outline-variant);
   --j-primary: var(--jm3-color-primary);
   --j-surface: var(--jm3-color-surface);
   --j-ease: var(--jm3-motion-ease-emphasized);
   --accent: var(--jm3-brand-cyan);
+  --text: var(--jusic-color-text);
+  --text-strong: var(--jusic-color-text-strong);
+  --muted: var(--jusic-color-muted);
+  --bg: #e4eaee;
+  --surface: var(--jusic-color-surface);
+  --surface-solid: var(--jusic-color-surface-solid);
+  --surface-2: var(--jusic-color-surface-container);
+  --border: var(--jusic-color-outline-variant);
+  --border-strong: rgba(41, 171, 226, 0.38);
+  --accent-mid: var(--jusic-color-primary-mid);
+  --accent-strong: var(--jusic-color-primary-strong);
+  --accent-soft: var(--jusic-color-primary-container);
+  --brand-gray: var(--jusic-color-brand-gray);
+  --brand-gray-soft: rgba(125, 125, 125, 0.14);
+  --shadow-sm: var(--jusic-elev-1);
+  --shadow-md: var(--jusic-elev-2);
+  --shadow-lg: var(--jusic-elev-3);
+  --shadow-accent: var(--jusic-elev-accent);
+  --radius: var(--jusic-shape-md);
+  --radius-lg: var(--jusic-shape-lg);
+  --radius-xl: var(--jusic-shape-xl);
+  --header-h: var(--jusic-header-h);
+  --toolbar-h: var(--jusic-toolbar-h);
+  --row-h: var(--jusic-row-h);
+  --blur-glass: var(--jusic-glass-blur);
+  --ease-spring: var(--jusic-motion-ease-spring);
 }
 
 @media (prefers-reduced-motion: reduce) {
   :root {
     --jm3-shape-morph-duration: 0ms;
+    --jm3-motion-duration-instant: 0ms;
     --jm3-motion-duration-short: 0ms;
     --jm3-motion-duration-medium: 0ms;
     --jm3-motion-duration-long: 0ms;
   }
+}
+
+[data-theme="dark"] {
+  --jm3-color-surface: #121416;
+  --jm3-color-surface-dim: #1a1c1e;
+  --jm3-color-surface-container: #1e2124;
+  --jm3-color-on-surface: #e2e2e5;
+  --jm3-color-on-surface-variant: #9ca3af;
+  --jm3-glass-bg: rgba(18, 20, 22, 0.78);
+  --jm3-gradient-canvas: radial-gradient(ellipse 80% 55% at 12% 0%, rgba(47, 180, 216, 0.08) 0%, transparent 55%),
+    var(--jm3-color-surface);
 }

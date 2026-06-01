@@ -1,16 +1,12 @@
-"use client";
+import { Search } from "lucide-react";
+import { motion, useScroll, useTransform } from "framer-motion";
+import { useRef, type ReactNode } from "react";
+import { cn } from "../../lib/cn";
+import { M3ShapeMorphGroup, type MorphGroupItem } from "./M3ShapeMorphGroup";
+import { M3SplitButton, type SplitMenuItem } from "./M3SplitButton";
+import { M3WaveformProgress, M3WaveformStrip, type WaveformState } from "./M3WaveformProgress";
 
-import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
-import { LayoutGroup, motion } from "framer-motion";
-import { JM3_SPRING, JM3_EASE_EMPHASIZED } from "../tokens/motion";
-import { WaveformProgress } from "./WaveformProgress";
-
-export type M3ToolbarSegment = {
-  id: string;
-  label: string;
-  icon?: ReactNode;
-  badge?: number;
-};
+export type { MorphGroupItem, SplitMenuItem, WaveformState };
 
 export type M3ToolbarMetric = {
   label: string;
@@ -18,31 +14,51 @@ export type M3ToolbarMetric = {
   tone?: "primary" | "amber" | "muted";
 };
 
-export type M3ToolbarIconAction = {
-  id: string;
-  label: string;
-  icon: ReactNode;
-  onClick: () => void;
-  disabled?: boolean;
-  primary?: boolean;
-};
-
 export type M3ExpressiveToolbarProps = {
-  title: string;
+  /** Page-header mode */
+  variant?: "workspace" | "header";
+  title?: string;
   subtitle?: string;
-  /** 0–100 — shows waveform strip when defined */
-  progress?: number;
-  segments?: M3ToolbarSegment[];
-  activeSegmentId?: string;
-  onSegmentChange?: (id: string) => void;
-  metrics?: M3ToolbarMetric[];
-  iconActions?: M3ToolbarIconAction[];
-  /** Primary split button */
-  splitLabel?: string;
-  splitIcon?: ReactNode;
-  onSplitMain?: () => void;
-  onSplitMenu?: () => void;
+  /** 0–100 strip progress (header variant) */
+  stripProgress?: number;
+
+  /** Workspace: inline search */
+  searchValue?: string;
+  onSearchChange?: (value: string) => void;
+  searchPlaceholder?: string;
+
+  /** Shape-morphing segmented control */
+  morphItems?: MorphGroupItem[];
+  morphValue?: string;
+  onMorphChange?: (id: string) => void;
+  morphAriaLabel?: string;
+
+  /** Icon morph group (view mode) */
+  viewItems?: MorphGroupItem[];
+  viewValue?: string;
+  onViewChange?: (id: string) => void;
+  viewAriaLabel?: string;
+
+  /** Flexible filter slot */
+  children?: ReactNode;
+
   trailing?: ReactNode;
+  metrics?: M3ToolbarMetric[];
+
+  count?: number;
+  selectedCount?: number;
+  syncProgress?: number;
+  syncState?: WaveformState;
+
+  primaryAction?: {
+    label: string;
+    icon?: ReactNode;
+    onClick: () => void;
+    menu?: SplitMenuItem[];
+  };
+
+  sticky?: boolean;
+  compressOnScroll?: boolean;
   className?: string;
 };
 
@@ -52,153 +68,142 @@ function metricClass(tone?: M3ToolbarMetric["tone"]): string {
   return "jm3-metric-chip jm3-metric-chip--muted";
 }
 
-function SegmentGroup({
-  segments,
-  activeId,
-  onChange
-}: {
-  segments: M3ToolbarSegment[];
-  activeId?: string;
-  onChange?: (id: string) => void;
-}) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [indicator, setIndicator] = useState({ width: 0, x: 0 });
-
-  const activeIndex = segments.findIndex((s) => s.id === activeId);
-
-  useLayoutEffect(() => {
-    const root = containerRef.current;
-    if (!root || activeIndex < 0) return;
-    const btn = root.querySelectorAll<HTMLButtonElement>(".jm3-segment-btn")[activeIndex];
-    if (!btn) return;
-    setIndicator({ width: btn.offsetWidth, x: btn.offsetLeft });
-  }, [activeIndex, segments, activeId]);
-
-  return (
-    <LayoutGroup id="jm3-segment-group">
-      <div ref={containerRef} className="jm3-segment-group" role="tablist">
-        {activeIndex >= 0 && indicator.width > 0 ? (
-          <motion.div
-            layoutId="jm3-segment-pill"
-            className="jm3-segment-group__indicator"
-            initial={false}
-            animate={{ width: indicator.width, x: indicator.x }}
-            transition={JM3_SPRING}
-          />
-        ) : null}
-        {segments.map((seg) => {
-          const active = seg.id === activeId;
-          return (
-            <button
-              key={seg.id}
-              type="button"
-              role="tab"
-              aria-selected={active}
-              className={`jm3-segment-btn ${active ? "jm3-segment-btn--active" : ""}`}
-              onClick={() => onChange?.(seg.id)}
-            >
-              {seg.icon}
-              <span>{seg.label}</span>
-              {seg.badge != null && seg.badge > 0 ? (
-                <span className="opacity-80 tabular-nums">({seg.badge.toLocaleString("he-IL")})</span>
-              ) : null}
-            </button>
-          );
-        })}
-      </div>
-    </LayoutGroup>
-  );
-}
-
-/**
- * M3 Expressive adaptive toolbar — segmented morph group, icon cluster, split CTA, waveform progress.
- */
-export function M3ExpressiveToolbar({
+export const M3ExpressiveToolbar = ({
+  variant = "workspace",
   title,
   subtitle,
-  progress,
-  segments,
-  activeSegmentId,
-  onSegmentChange,
-  metrics = [],
-  iconActions = [],
-  splitLabel,
-  splitIcon,
-  onSplitMain,
-  onSplitMenu,
+  stripProgress,
+  searchValue = "",
+  onSearchChange,
+  searchPlaceholder = "חיפוש...",
+  morphItems,
+  morphValue,
+  onMorphChange,
+  morphAriaLabel = "סינון",
+  viewItems,
+  viewValue,
+  onViewChange,
+  viewAriaLabel = "תצוגה",
+  children,
   trailing,
-  className = ""
-}: M3ExpressiveToolbarProps) {
-  return (
-    <header className={`jm3-toolbar ${className}`.trim()}>
-      {progress != null ? <WaveformProgress value={progress} /> : null}
+  metrics = [],
+  count,
+  selectedCount = 0,
+  syncProgress = 0,
+  syncState = "idle",
+  primaryAction,
+  sticky = true,
+  compressOnScroll = true,
+  className,
+}: M3ExpressiveToolbarProps) => {
+  const ref = useRef<HTMLElement>(null);
+  const { scrollY } = useScroll();
+  const compact = useTransform(scrollY, [0, 72], [0, 1]);
+  const padY = useTransform(compact, [0, 1], [8, 4]);
+  const glowOpacity = useTransform(compact, [0, 1], [0.65, 0.25]);
 
-      <div className="jm3-toolbar__row">
-        <div className="jm3-toolbar__title-block">
-          <h1 className="jm3-toolbar__title">{title}</h1>
-          {subtitle ? <p className="jm3-toolbar__subtitle">{subtitle}</p> : null}
-        </div>
+  const isHeader = variant === "header";
+
+  return (
+    <motion.header
+      ref={ref}
+      className={cn(
+        "jm3-ex-toolbar",
+        sticky && "jm3-ex-toolbar--sticky",
+        isHeader && "jm3-ex-toolbar--header",
+        className,
+      )}
+      aria-label={isHeader ? title : "סרגל עבודה"}
+      style={
+        compressOnScroll && sticky ? { paddingBlock: padY } : undefined
+      }
+    >
+      {stripProgress != null ? <M3WaveformStrip value={stripProgress} /> : null}
+
+      <motion.div
+        className="jm3-ex-toolbar__glow"
+        aria-hidden
+        style={compressOnScroll ? { opacity: glowOpacity } : undefined}
+      />
+
+      <div className="jm3-ex-toolbar__row">
+        {isHeader && title ? (
+          <div className="jm3-ex-toolbar__title-block">
+            <h1 className="jm3-ex-toolbar__title">{title}</h1>
+            {subtitle ? <p className="jm3-ex-toolbar__subtitle">{subtitle}</p> : null}
+          </div>
+        ) : null}
+
+        {onSearchChange ? (
+          <label className="jm3-ex-toolbar__search">
+            <Search size={14} className="jm3-ex-toolbar__search-icon" aria-hidden />
+            <input
+              value={searchValue}
+              onChange={(e) => onSearchChange(e.target.value)}
+              placeholder={searchPlaceholder}
+              aria-label="חיפוש"
+            />
+          </label>
+        ) : null}
+
+        {morphItems && morphValue != null && onMorphChange ? (
+          <M3ShapeMorphGroup
+            items={morphItems}
+            value={morphValue}
+            onChange={onMorphChange}
+            aria-label={morphAriaLabel}
+          />
+        ) : null}
+
+        <div className="jm3-ex-toolbar__filters">{children}</div>
+
+        {viewItems && viewValue != null && onViewChange ? (
+          <M3ShapeMorphGroup
+            items={viewItems}
+            value={viewValue}
+            onChange={onViewChange}
+            iconOnly
+            aria-label={viewAriaLabel}
+          />
+        ) : null}
 
         {metrics.length > 0 ? (
-          <div className="flex flex-wrap items-center gap-1">
+          <div className="jm3-ex-toolbar__metrics">
             {metrics.map((m) => (
               <span key={m.label} className={metricClass(m.tone)} title={m.label}>
-                <span style={{ fontWeight: 500, opacity: 0.85 }}>{m.label}</span>
+                <span className="jm3-metric-chip__label">{m.label}</span>
                 {m.value.toLocaleString("he-IL")}
               </span>
             ))}
           </div>
         ) : null}
 
-        {segments && segments.length > 0 ? (
-          <SegmentGroup
-            segments={segments}
-            activeId={activeSegmentId}
-            onChange={onSegmentChange}
-          />
-        ) : null}
-
-        {iconActions.length > 0 ? (
-          <div className="jm3-icon-cluster">
-            {iconActions.map((action) => (
-              <button
-                key={action.id}
-                type="button"
-                className={`jm3-icon-btn ${action.primary ? "jm3-icon-btn--primary" : ""}`}
-                onClick={action.onClick}
-                disabled={action.disabled}
-                aria-label={action.label}
-                title={action.label}
-              >
-                {action.icon}
-              </button>
-            ))}
-          </div>
-        ) : null}
-
-        {splitLabel && onSplitMain ? (
-          <div className="jm3-split-btn">
-            <button type="button" className="jm3-split-btn__main" onClick={onSplitMain}>
-              {splitIcon}
-              {splitLabel}
-            </button>
-            {onSplitMenu ? (
-              <button
-                type="button"
-                className="jm3-split-btn__chevron"
-                onClick={onSplitMenu}
-                aria-label="אפשרויות נוספות"
-              >
-                ▾
-              </button>
+        {(syncState !== "idle" || count != null) && (
+          <div className="jm3-ex-toolbar__status">
+            {syncState !== "idle" ? (
+              <M3WaveformProgress progress={syncProgress} state={syncState} />
+            ) : null}
+            {count != null ? (
+              <span className="jm3-ex-toolbar__meta">
+                {count.toLocaleString("he-IL")}
+                {selectedCount > 0 ? ` · ${selectedCount} נבחרו` : ""}
+              </span>
             ) : null}
           </div>
-        ) : null}
+        )}
 
-        {trailing}
+        <div className="jm3-ex-toolbar__trailing">
+          {trailing}
+          {primaryAction ? (
+            <M3SplitButton
+              label={primaryAction.label}
+              icon={primaryAction.icon}
+              onPrimaryClick={primaryAction.onClick}
+              menuItems={primaryAction.menu}
+            />
+          ) : null}
+        </div>
       </div>
-    </header>
+    </motion.header>
   );
-}
-
-export { JM3_EASE_EMPHASIZED, JM3_SPRING };
+};
