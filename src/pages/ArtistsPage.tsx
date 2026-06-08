@@ -11,7 +11,7 @@ import {
 import { ArtistFormModal } from '../components/ArtistFormModal'
 import { ArtistDetailPanel } from '../components/ArtistDetailPanel'
 import { ArtistVersionHistory } from '../components/ArtistVersionHistory'
-import { ArtistStatusFunnel } from '../features/artists/funnel/ArtistStatusFunnel'
+import { EliteArtistWorkspace } from '../features/artists/EliteArtistWorkspace'
 import { ArtistsSkeleton } from '../features/artists/ArtistsSkeleton'
 import { BulkActionsBar } from '../features/artists/BulkActionsBar'
 import { ArtistsWorkspaceHeader } from '../features/artists/workspace/ArtistsWorkspaceHeader'
@@ -391,16 +391,18 @@ export const ArtistsPage = () => {
               }}
             />
         ) : viewMode === 'kanban' ? (
-          <ArtistStatusFunnel
+          <EliteArtistWorkspace
             artists={artists}
-            statusMeta={STATUS_META}
             stats={data?.stats}
-            filteredTotal={total}
+            handlers={handlerList}
+            statusFilter={statusFilter}
             selectedIds={selectedIds}
+            onStatusFilterChange={setStatusFilter}
             onToggleSelect={toggleSelected}
             onSetSelection={setSelection}
             onOpenDetail={openArtist}
             onBulkStatusChange={handleBulkStatusChange}
+            onUpdateArtist={updateArtist}
           />
         ) : (
           <ArtistsDenseTable

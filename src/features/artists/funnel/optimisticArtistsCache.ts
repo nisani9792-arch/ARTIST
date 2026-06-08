@@ -9,7 +9,7 @@ type ArtistsListPayload = {
     total: number
     signed: number
     unsigned: number
-    stuck: number
+    in_process: number
     unassigned?: number
     popular?: number
     main_bucket?: number
@@ -39,10 +39,10 @@ const adjustStats = (
   if (prevStatus && nextStatus && prevStatus !== nextStatus) {
     if (prevStatus === 'signed') next.signed = Math.max(0, next.signed - 1)
     if (prevStatus === 'unsigned') next.unsigned = Math.max(0, next.unsigned - 1)
-    if (prevStatus === 'stuck') next.stuck = Math.max(0, next.stuck - 1)
+    if (prevStatus === 'in_process') next.in_process = Math.max(0, next.in_process - 1)
     if (nextStatus === 'signed') next.signed += 1
     if (nextStatus === 'unsigned') next.unsigned += 1
-    if (nextStatus === 'stuck') next.stuck += 1
+    if (nextStatus === 'in_process') next.in_process += 1
   }
 
   const prevKey = bucketStatKey(prevBucket)

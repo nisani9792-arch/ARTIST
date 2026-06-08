@@ -50,7 +50,7 @@ describe('filterArtists', () => {
     expect(result[0]?.id).toBe('2')
   })
 
-  it('prioritizes stuck artists in smart sort', () => {
+  it('prioritizes in_process artists in smart sort', () => {
     const rows = buildArtistSearchRows([
       {
         id: '3',
@@ -59,7 +59,7 @@ describe('filterArtists', () => {
         genres: [],
         tags: ['דחוף', 'עוד'],
         latestAlbum: '',
-        status: 'stuck',
+        status: 'in_process',
         owner: 'שימון',
         source: '',
         notes: '',
@@ -79,7 +79,7 @@ describe('filterArtists', () => {
       sortBy: 'smart',
     })
 
-    expect(result[0]?.status).toBe('stuck')
+    expect(result[0]?.status).toBe('in_process')
   })
 
   it('hides signed artists when needs action filter is on', () => {

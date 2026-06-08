@@ -15,12 +15,14 @@ export const HANDLERS = [
 export const STATUS_META: Record<SignatureStatus, { label: string; tone: string }> = {
   signed: { label: 'חתום', tone: 'signed' },
   unsigned: { label: 'לא חתום', tone: 'unsigned' },
-  stuck: { label: 'תקוע', tone: 'stuck' },
+  in_process: { label: 'בעבודה', tone: 'in_process' },
 }
+
+export const MAIN_BOARD_STATUSES: SignatureStatus[] = ['in_process', 'signed']
 
 export const priorityForStatus = (status: SignatureStatus) => {
   if (status === 'signed') return 'שימור קשר'
-  if (status === 'stuck') return 'פתיחת חסם'
+  if (status === 'in_process') return 'פתיחת חסם'
   return 'ליצירת קשר'
 }
 

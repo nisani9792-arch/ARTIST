@@ -21,7 +21,7 @@ export const buildArtistSearchRows = (artists: CrmArtist[]): ArtistSearchRow[] =
   }))
 
 const scoreArtist = (artist: CrmArtist) =>
-  (artist.status === 'stuck' ? 70 : 0) +
+  (artist.status === 'in_process' ? 70 : 0) +
   (artist.status === 'unsigned' ? 45 : 0) +
   (artist.owner === 'לא שויך' ? 25 : 0) +
   Math.min(artist.tags.length, 10) * 2
@@ -89,7 +89,7 @@ export type HeaderStats = {
   total: number
   signed: number
   unsigned: number
-  stuck: number
+  in_process: number
   unassigned: number
 }
 
@@ -97,20 +97,20 @@ export const emptyHeaderStats = (): HeaderStats => ({
   total: 0,
   signed: 0,
   unsigned: 0,
-  stuck: 0,
+  in_process: 0,
   unassigned: 0,
 })
 
 export const computeHeaderStats = (artists: CrmArtist[]): HeaderStats => {
   let signed = 0
   let unsigned = 0
-  let stuck = 0
+  let in_process = 0
   let unassigned = 0
 
   for (const artist of artists) {
     if (artist.status === 'signed') signed += 1
     else if (artist.status === 'unsigned') unsigned += 1
-    else if (artist.status === 'stuck') stuck += 1
+    else if (artist.status === 'in_process') in_process += 1
     if (artist.owner === 'לא שויך') unassigned += 1
   }
 
@@ -118,7 +118,7 @@ export const computeHeaderStats = (artists: CrmArtist[]): HeaderStats => {
     total: artists.length,
     signed,
     unsigned,
-    stuck,
+    in_process,
     unassigned,
   }
 }

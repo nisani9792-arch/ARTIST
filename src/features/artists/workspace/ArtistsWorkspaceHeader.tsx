@@ -39,7 +39,7 @@ type ArtistsWorkspaceHeaderProps = {
 const STATUS_MORPH = [
   { id: 'all', label: 'הכל' },
   { id: 'unsigned', label: 'לא חתום' },
-  { id: 'stuck', label: 'תקוע' },
+  { id: 'in_process', label: 'בעבודה' },
   { id: 'signed', label: 'חתום' },
 ] as const
 

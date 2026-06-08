@@ -1,4 +1,4 @@
-export type SignatureStatus = 'signed' | 'unsigned' | 'stuck'
+export type SignatureStatus = 'signed' | 'unsigned' | 'in_process'
 
 export type ArtistBucket = 'popular' | 'main' | 'outside_genre'
 

@@ -7,7 +7,7 @@ type StatusMeta = Record<SignatureStatus, { label: string; tone: string }>
 type ArtistStatusFunnelProps = {
   artists: CrmArtist[]
   statusMeta: StatusMeta
-  stats?: { signed: number; unsigned: number; stuck: number; total: number }
+  stats?: { signed: number; unsigned: number; in_process: number; total: number }
   filteredTotal?: number
   selectedIds: Set<string>
   onToggleSelect: (id: string) => void

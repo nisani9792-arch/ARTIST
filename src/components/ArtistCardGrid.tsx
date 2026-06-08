@@ -70,7 +70,7 @@ export const ArtistCardGrid = memo(function ArtistCardGrid({
                 >
                   <option value="signed">חתום</option>
                   <option value="unsigned">לא חתום</option>
-                  <option value="stuck">תקוע</option>
+                  <option value="in_process">בעבודה</option>
                 </select>
               </label>
             </div>

@@ -10,7 +10,7 @@ type StatusMeta = Record<SignatureStatus, { label: string; tone: string }>
 type CompactKanbanBoardProps = {
   artists: CrmArtist[]
   statusMeta: StatusMeta
-  stats?: { signed: number; unsigned: number; stuck: number; total: number }
+  stats?: { signed: number; unsigned: number; in_process: number; total: number }
   filteredTotal?: number
   selectedIds: Set<string>
   onToggleSelect: (id: string) => void
@@ -36,7 +36,7 @@ export const CompactKanbanBoard = ({
   const counts = stats ?? {
     signed: artists.filter((a) => a.status === 'signed').length,
     unsigned: artists.filter((a) => a.status === 'unsigned').length,
-    stuck: artists.filter((a) => a.status === 'stuck').length,
+    in_process: artists.filter((a) => a.status === 'in_process').length,
     total: artists.length,
   }
 
@@ -76,8 +76,8 @@ export const CompactKanbanBoard = ({
         <span className="m3-stat-pill m3-stat-pill--unsigned">
           לא חתום <strong>{counts.unsigned.toLocaleString('he-IL')}</strong>
         </span>
-        <span className="m3-stat-pill m3-stat-pill--stuck">
-          תקוע <strong>{counts.stuck.toLocaleString('he-IL')}</strong>
+        <span className="m3-stat-pill m3-stat-pill--in-process">
+          בעבודה <strong>{counts.in_process.toLocaleString('he-IL')}</strong>
         </span>
         <span className="m3-stat-pill m3-stat-pill--signed">
           חתום <strong>{counts.signed.toLocaleString('he-IL')}</strong>
@@ -95,7 +95,7 @@ export const CompactKanbanBoard = ({
         )}
       </div>
 
-      <div className="m3-kanban-grid grid min-h-0 flex-1 grid-cols-3 gap-2">
+      <div className="m3-kanban-grid grid min-h-0 flex-1 grid-cols-2 gap-2">
         {grouped.map(({ status, meta, items }) => (
           <VirtualKanbanColumn
             key={status}

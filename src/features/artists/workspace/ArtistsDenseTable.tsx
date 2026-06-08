@@ -90,7 +90,7 @@ export const ArtistsDenseTable = ({
                     }}
                   >
                     <option value="unsigned">{statusMeta.unsigned.label}</option>
-                    <option value="stuck">{statusMeta.stuck.label}</option>
+                    <option value="in_process">{statusMeta.in_process.label}</option>
                     <option value="signed">{statusMeta.signed.label}</option>
                   </select>
                 </td>

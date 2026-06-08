@@ -123,7 +123,7 @@ export const ArtistsToolbar = ({
               ['all', 'הכל'],
               ['signed', 'חתום'],
               ['unsigned', 'לא חתום'],
-              ['stuck', 'תקוע'],
+              ['in_process', 'בעבודה'],
             ] as const
           ).map(([value, label]) => (
             <button

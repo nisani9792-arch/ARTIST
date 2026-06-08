@@ -18,7 +18,7 @@ const importArtists = async () => {
       acc[artist.status] += 1
       return acc
     },
-    { total: 0, signed: 0, unsigned: 0, stuck: 0 },
+    { total: 0, signed: 0, unsigned: 0, in_process: 0 },
   )
 
   console.log(

@@ -1,7 +1,7 @@
 import type { SignatureStatus } from '../../../data/types'
 import type { CrmArtist } from '../../../types'
 
-export const FUNNEL_STATUSES: SignatureStatus[] = ['unsigned', 'stuck', 'signed']
+export const FUNNEL_STATUSES: SignatureStatus[] = ['in_process', 'signed']
 
 export const nextFunnelStatus = (status: SignatureStatus): SignatureStatus => {
   const index = FUNNEL_STATUSES.indexOf(status)
@@ -29,7 +29,7 @@ export const formatLastActivity = (updatedAt?: string) => {
 /** תווית חוזה נגזרת מסטטוס — אין שדה תאריך פג תוקף ב-DB */
 export const contractStatusLabel = (status: SignatureStatus) => {
   if (status === 'signed') return 'חוזה פעיל'
-  if (status === 'stuck') return 'משא ומתן / חסום'
+  if (status === 'in_process') return 'משא ומתן / בבדיקה'
   return 'ממתין לחתימה'
 }
 

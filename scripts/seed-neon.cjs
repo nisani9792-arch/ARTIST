@@ -7,7 +7,7 @@ const seedNeon = async () => {
 
   const stats = await getStats()
   console.log(
-    `Seeded Neon with ${stats.total} artists (${stats.signed} signed, ${stats.unsigned} unsigned, ${stats.stuck} stuck).`,
+    `Seeded Neon with ${stats.total} artists (${stats.signed} signed, ${stats.unsigned} unsigned, ${stats.in_process} in_process).`,
   )
 }
 

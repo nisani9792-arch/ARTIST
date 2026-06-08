@@ -142,7 +142,7 @@
   color: var(--red);
 }
 
-.stat-pill.stuck strong {
+.stat-pill.in-process strong {
   color: var(--yellow);
 }
 
@@ -512,12 +512,12 @@
   box-shadow: 0 0 6px rgba(226, 85, 85, 0.45);
 }
 
-.badge.stuck {
+.badge.in-process {
   color: var(--yellow);
   background: var(--yellow-soft);
 }
 
-.badge.stuck::before {
+.badge.in-process::before {
   background: var(--yellow);
   box-shadow: 0 0 6px rgba(201, 138, 8, 0.45);
 }
@@ -707,7 +707,7 @@
   border-top: 3px solid var(--red);
 }
 
-.mini-card.stuck {
+.mini-card.in-process {
   border-top: 3px solid var(--yellow);
 }
 
@@ -1084,7 +1084,7 @@
   border-color: rgba(226, 85, 85, 0.28);
 }
 
-.dashboard-stat-card.stuck {
+.dashboard-stat-card.in-process {
   border-color: rgba(201, 138, 8, 0.32);
 }
 
@@ -1834,7 +1834,7 @@
   background: var(--yellow-soft);
 }
 
-.funnel-summary-chip--stuck.active {
+.funnel-summary-chip--in-process.active {
   border-color: rgba(201, 74, 74, 0.4);
   background: var(--red-soft);
 }
@@ -1932,7 +1932,7 @@
   background: linear-gradient(180deg, #e08a12, #f0a832);
 }
 
-.funnel-card--stuck .funnel-card-rail {
+.funnel-card--in-process .funnel-card-rail {
   background: linear-gradient(180deg, #c94a4a, #e06a6a);
 }
 
@@ -2189,7 +2189,7 @@
   color: #9b3030;
 }
 
-.badge-select.stuck {
+.badge-select.in-process {
   background: var(--yellow-soft);
   color: #7a5206;
 }

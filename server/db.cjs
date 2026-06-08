@@ -30,10 +30,12 @@ if (!databaseUrl) {
 const sql = neon(databaseUrl)
 const { BUCKETS, classifyArtistBuckets } = require('./artistBuckets.cjs')
 
-const allowedStatuses = new Set(['signed', 'unsigned', 'stuck'])
+const allowedStatuses = new Set(['signed', 'unsigned', 'in_process', 'stuck'])
 const allowedBuckets = new Set(BUCKETS)
 const UNASSIGNED_OWNER = 'לא שויך'
 const DEFAULT_POPULAR_LIMIT = 20
+
+const normalizeStatus = (status) => (status === 'stuck' ? 'in_process' : status)
 
 const normalizeArtist = (artist) => ({
   id: artist.id,
@@ -42,7 +44,7 @@ const normalizeArtist = (artist) => ({
   genres: artist.genres ?? [],
   tags: artist.tags ?? [],
   latestAlbum: artist.latest_album ?? '',
-  status: artist.status,
+  status: normalizeStatus(artist.status),
   owner: artist.owner ?? UNASSIGNED_OWNER,
   source: artist.source ?? '',
   notes: artist.notes ?? '',
@@ -63,7 +65,7 @@ const setupDatabase = async () => {
       genres TEXT[] NOT NULL DEFAULT '{}',
       tags TEXT[] NOT NULL DEFAULT '{}',
       latest_album TEXT NOT NULL DEFAULT '',
-      status TEXT NOT NULL CHECK (status IN ('signed', 'unsigned', 'stuck')),
+      status TEXT NOT NULL CHECK (status IN ('signed', 'unsigned', 'in_process', 'stuck')),
       owner TEXT NOT NULL DEFAULT 'לא שויך',
       source TEXT NOT NULL DEFAULT '',
       notes TEXT NOT NULL DEFAULT '',
@@ -108,6 +110,13 @@ const setupDatabase = async () => {
     )
   `
   await sql`CREATE INDEX IF NOT EXISTS artist_versions_artist_idx ON artist_versions (artist_id, created_at DESC)`
+
+  await sql`UPDATE artists SET status = 'in_process' WHERE status = 'stuck'`
+  await sql`ALTER TABLE artists DROP CONSTRAINT IF EXISTS artists_status_check`
+  await sql`
+    ALTER TABLE artists ADD CONSTRAINT artists_status_check
+    CHECK (status IN ('signed', 'unsigned', 'in_process'))
+  `
 }
 
 const MAX_VERSIONS_PER_ARTIST = 40
@@ -417,7 +426,7 @@ const getStats = async () => {
       COUNT(*)::INT AS total,
       COUNT(*) FILTER (WHERE status = 'signed')::INT AS signed,
       COUNT(*) FILTER (WHERE status = 'unsigned')::INT AS unsigned,
-      COUNT(*) FILTER (WHERE status = 'stuck')::INT AS stuck,
+      COUNT(*) FILTER (WHERE status = 'in_process')::INT AS in_process,
       COUNT(*) FILTER (WHERE owner = ${UNASSIGNED_OWNER})::INT AS unassigned,
       COUNT(*) FILTER (WHERE bucket = 'popular')::INT AS popular,
       COUNT(*) FILTER (WHERE bucket = 'main')::INT AS main_bucket,
@@ -453,7 +462,7 @@ const buildSearchFilters = ({
 }) => {
   const query = String(q ?? '').trim()
   const likeQuery = query ? `%${query}%` : null
-  const statusValue = status === 'all' ? null : status
+  const statusValue = status === 'all' ? null : normalizeStatus(status)
   const ownerValue = owner === 'all' ? null : owner
   const tagValue = tag === 'all' ? null : tag
   const genreValue = genre === 'all' ? null : genre
@@ -531,7 +540,7 @@ const orderClause = (sort) => {
       name_he COLLATE "C"`
   }
   return sql`ORDER BY
-    (CASE WHEN status = 'stuck' THEN 70 WHEN status = 'unsigned' THEN 45 ELSE 0 END)
+    (CASE WHEN status = 'in_process' THEN 70 WHEN status = 'unsigned' THEN 45 ELSE 0 END)
     + (CASE WHEN owner = ${UNASSIGNED_OWNER} THEN 25 ELSE 0 END)
     + LEAST(COALESCE(array_length(tags, 1), 0), 10) * 2 DESC,
     popularity_score DESC,
@@ -600,7 +609,8 @@ const updateArtist = async (id, patch, operator, { skipVersion = false } = {}) =
   }
 
   const effectivePatch = withOperatorOwner(patch, operator)
-  const nextStatus = effectivePatch.status
+  const nextStatus =
+    effectivePatch.status !== undefined ? normalizeStatus(effectivePatch.status) : undefined
 
   if (nextStatus !== undefined && !allowedStatuses.has(nextStatus)) {
     throw new Error('Invalid status')
@@ -649,7 +659,7 @@ const createArtist = async (payload, operator) => {
     throw new Error('Artist name is required')
   }
 
-  const status = effectivePayload.status ?? 'unsigned'
+  const status = normalizeStatus(effectivePayload.status ?? 'unsigned')
   if (!allowedStatuses.has(status)) {
     throw new Error('Invalid status')
   }
@@ -693,7 +703,7 @@ const createArtist = async (payload, operator) => {
       ${effectivePayload.owner ?? UNASSIGNED_OWNER},
       ${String(effectivePayload.source ?? '').trim()},
       ${String(effectivePayload.notes ?? '').trim()},
-      ${effectivePayload.priority ?? (status === 'signed' ? 'שימור קשר' : status === 'stuck' ? 'פתיחת חסם' : 'ליצירת קשר')},
+      ${effectivePayload.priority ?? (status === 'signed' ? 'שימור קשר' : status === 'in_process' ? 'פתיחת חסם' : 'ליצירת קשר')},
       ${allowedBuckets.has(effectivePayload.bucket) ? effectivePayload.bucket : 'main'},
       ${Number(effectivePayload.popularityScore ?? 0)},
       ${operator ?? ''}
@@ -732,7 +742,8 @@ const bulkUpdateArtists = async ({ ids, status, owner, priority, bucket }, opera
     throw new Error('Too many artists selected for bulk update')
   }
 
-  if (!allowedStatuses.has(status)) {
+  const normalizedStatus = normalizeStatus(status)
+  if (!allowedStatuses.has(normalizedStatus)) {
     throw new Error('Invalid status')
   }
 
@@ -743,7 +754,7 @@ const bulkUpdateArtists = async ({ ids, status, owner, priority, bucket }, opera
   const rows = await sql`
     UPDATE artists
     SET
-      status = ${status},
+      status = ${normalizedStatus},
       owner = ${effectiveOwner},
       priority = ${priority},
       bucket = COALESCE(${bucket ?? null}, bucket),

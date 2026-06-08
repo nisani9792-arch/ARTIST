@@ -121,7 +121,7 @@ export const ArtistsTable = ({
                     >
                       <option value="signed">חתום</option>
                       <option value="unsigned">לא חתום</option>
-                      <option value="stuck">תקוע</option>
+                      <option value="in_process">בעבודה</option>
                     </select>
                   </td>
                   <td className="col-notes" onClick={(e) => e.stopPropagation()}>

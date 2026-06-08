@@ -122,8 +122,8 @@ export const AppShell = ({
             <span className="stat-pill unsigned">
               לא חתומים <strong>{stats.unsigned.toLocaleString('he-IL')}</strong>
             </span>
-            <span className="stat-pill stuck">
-              תקועים <strong>{stats.stuck.toLocaleString('he-IL')}</strong>
+            <span className="stat-pill in-process">
+              בעבודה <strong>{stats.in_process.toLocaleString('he-IL')}</strong>
             </span>
           </div>
         )}

@@ -11,7 +11,7 @@ export type HeaderStats = {
   total: number
   signed: number
   unsigned: number
-  stuck: number
+  in_process: number
   unassigned: number
   popular: number
   main_bucket: number
@@ -280,7 +280,7 @@ export const exportArtistsCsv = (artists: CrmArtist[], filename = 'artist-crm-ex
     main: 'שאר',
     outside_genre: 'מחוץ לז׳אנר',
   }
-  const statusLabels = { signed: 'חתום', unsigned: 'לא חתום', stuck: 'תקוע' }
+  const statusLabels = { signed: 'חתום', unsigned: 'לא חתום', in_process: 'בעבודה' }
   const rows = artists.map((artist) => [
     artist.nameHe,
     artist.nameEn,

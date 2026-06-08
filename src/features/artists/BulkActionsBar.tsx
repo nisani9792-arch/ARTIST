@@ -42,7 +42,7 @@ export const BulkActionsBar = ({
       <select value={bulkStatus} onChange={(e) => onBulkStatusChange(e.target.value as SignatureStatus)}>
         <option value="signed">חתום</option>
         <option value="unsigned">לא חתום</option>
-        <option value="stuck">תקוע</option>
+        <option value="in_process">בעבודה</option>
       </select>
       <select value={bulkOwner} onChange={(e) => onBulkOwnerChange(e.target.value)}>
         {handlers.map((handler) => (

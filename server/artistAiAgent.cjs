@@ -12,7 +12,7 @@ const SIGNED_HANDLER = 'אלעזר מרקס'
 
 const priority = (status) => {
   if (status === 'signed') return 'שימור קשר'
-  if (status === 'stuck') return 'פתיחת חסם'
+  if (status === 'in_process') return 'פתיחת חסם'
   return 'ליצירת קשר'
 }
 
@@ -30,7 +30,7 @@ const SYSTEM_PROMPT = `אתה עוזר CRM חכם למערכת JUSIC ARTIST לנ
 }
 
 כללי פעולה:
-- create_artist: { nameHe, nameEn?, status?: signed|unsigned|stuck, owner?, bucket?: popular|main|outside_genre, genres?: string[], tags?: string[], notes? }
+- create_artist: { nameHe, nameEn?, status?: signed|unsigned|in_process, owner?, bucket?: popular|main|outside_genre, genres?: string[], tags?: string[], notes? }
   אם status=signed שייך owner לברירת מחדל "${SIGNED_HANDLER}" אלא אם צוין אחרת.
 - update_artist: { id או nameHe, patch: { status?, owner?, bucket?, notes?, tags?, genres? } }
 - bulk_update_status: { query או ids[], status, owner? } — לעדכון מרוכז לפי חיפוש או רשימת מזהים

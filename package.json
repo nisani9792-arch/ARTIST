@@ -11,6 +11,7 @@
     "dev:server": "node server/index.cjs",
     "import:artists": "node scripts/import-artists.cjs",
     "db:init": "node scripts/init-db.cjs",
+    "db:migrate": "node scripts/migrate-in-process.cjs",
     "db:seed": "node scripts/seed-neon.cjs",
     "db:replace": "node scripts/replace-all-artists.cjs",
     "classify:buckets": "node scripts/classify-artist-buckets.cjs",
@@ -23,11 +24,15 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^10.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
     "@google/generative-ai": "^0.24.1",
     "@neondatabase/serverless": "^1.1.0",
     "@tanstack/react-query": "^5.100.11",
     "@tanstack/react-virtual": "^3.13.26",
     "clsx": "^2.1.1",
+    "cmdk": "^1.1.1",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "express-rate-limit": "^8.5.2",
@@ -36,7 +41,8 @@
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
     "react-router-dom": "^7.15.1",
-    "tailwind-merge": "^3.6.0"
+    "tailwind-merge": "^3.6.0",
+    "zustand": "^5.0.14"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

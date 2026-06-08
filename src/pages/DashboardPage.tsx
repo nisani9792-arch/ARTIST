@@ -65,9 +65,9 @@ export const DashboardPage = ({ operatorName }: DashboardPageProps) => {
           <span>לא חתומים</span>
           <strong>{stats?.unsigned.toLocaleString('he-IL') ?? '—'}</strong>
         </article>
-        <article className="dashboard-stat-card stuck">
-          <span>תקועים</span>
-          <strong>{stats?.stuck.toLocaleString('he-IL') ?? '—'}</strong>
+        <article className="dashboard-stat-card in-process">
+          <span>בעבודה</span>
+          <strong>{stats?.in_process.toLocaleString('he-IL') ?? '—'}</strong>
         </article>
       </section>
 
@@ -102,8 +102,8 @@ export const DashboardPage = ({ operatorName }: DashboardPageProps) => {
         <Link className="dashboard-shortcut" to="/artists?myQueue=true">
           העבודה שלי
         </Link>
-        <Link className="dashboard-shortcut" to="/artists?status=stuck">
-          תקועים
+        <Link className="dashboard-shortcut" to="/artists?status=in_process">
+          בעבודה
         </Link>
         <Link className="dashboard-shortcut" to="/artists?needsAction=true">
           דורש פעולה
