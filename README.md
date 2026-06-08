@@ -1,6 +1,6 @@
 # JUSIC ARTIST
 
-מערכת CRM חכמה וקלה לניהול אומנים חתומים, לא חתומים ותקועים.
+מערכת CRM חכמה וקלה לניהול אומנים — **JUSIC ELITE PRO**: 3 סטטוסים (חתום / בעבודה / לא חתום), לוח קנבן לפי סטטוס, Unsigned Vault, Omnibar (Ctrl+K).
 
 ## מה יש במערכת
 
@@ -30,6 +30,15 @@ npm run dev
 npm run build
 npm run start
 ```
+
+## פריסה ב-Render
+
+1. חבר את [github.com/nisani9792-arch/ARTIST](https://github.com/nisani9792-arch/ARTIST) ב-Render (Blueprint או Web Service).
+2. הגדר `DATABASE_URL` (Neon pooled URL), `GATE_SECRET`, `GEMINI_API_KEY`.
+3. Build: `npm ci && npm run build` · Start: `npm run start`
+4. מיגרציה `stuck → in_process` רצה אוטומטית ב-`setupDatabase()` בעלייה.
+
+Blueprint: [Render Deploy](https://render.com/deploy?repo=https://github.com/nisani9792-arch/ARTIST)
 
 ## ייבוא נתונים מאקסל
 
