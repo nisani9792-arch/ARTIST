@@ -3,12 +3,17 @@ services:
     name: jusic-artist
     runtime: node
     plan: free
+    repo: https://github.com/nisani9792-arch/ARTIST
+    branch: main
+    autoDeploy: true
     buildCommand: npm ci && npm run build
     startCommand: npm run start
     healthCheckPath: /api/health
     envVars:
       - key: NODE_VERSION
-        value: 22
+        value: "22"
+      - key: GATE_SECRET
+        value: JUSIC
       - key: DATABASE_URL
         sync: false
       - key: GEMINI_API_KEY
